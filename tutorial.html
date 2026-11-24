@@ -64,6 +64,8 @@ textarea.csv:focus-visible { outline: 2px solid var(--accent); outline-offset: 2
 .feedback.bad { color: var(--icse); }
 .scale-note { font-size: 0.85rem; color: var(--muted); margin: -6px 0 0; max-width: 70ch; }
 .data-note { font-size: 0.85rem; color: var(--muted); margin: 0; }
+.quiz-status { font: 0.8rem/1.6 var(--font-mono); color: var(--muted); margin: 0; }
+.quiz-status b { color: var(--ink); font-weight: 500; }
 .top-right { display: flex; align-items: baseline; gap: 14px; }
 .gloss-open { font: 500 0.82rem var(--font-text); color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 .term { font: inherit; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
@@ -483,6 +485,7 @@ function listen(parent, main, others = []) {
   row.append(mb);
   if (others.length) { const c = el("div", { class: "chips" }); for (const o of others) { const b = el("button", { type: "button", class: "chip", text: o.label }); b.addEventListener("click", () => o.run(b)); c.append(b); } row.append(c); }
   parent.append(row);
+  return mb;
 }
 // canvas chart, redrawn on resize
 function plot(parent, height, draw) {
@@ -1113,6 +1116,157 @@ const FX_CUES = {
   bright: "a clearer, sharper sound, with no change in pitch or stability.",
   fold: "the grain changes: from smooth to buzzing and rough, in steps."
 };
+// ---------------- quiz ----------------
+// Four modes. The listening is the same in free practice, the round and the adaptive mode:
+// a 6-second ramp of s on A3, ghost voice on, each effect at its default depth.
+const KEYS = Object.keys(FX_NAMES);
+const ROUND_EACH = 2, LEVEL_Q = 4, LEVEL_PASS = 3;
+const LEVELS = [
+  { name: "Level 1 · with a reference", note: "one effect at full depth, ghost voice on", ghost: true, scale: 1 },
+  { name: "Level 2 · no reference", note: "one effect at full depth, no ghost voice to compare against", ghost: false, scale: 1 },
+  { name: "Level 3 · subtle", note: "one effect at half depth, ghost voice on", ghost: true, scale: 0.5 },
+  { name: "Level 4 · two at once", note: "two effects together: pick both, then press Check", ghost: true, scale: 1, pair: true },
+  { name: "Level 5 · in the piece", note: "the last years of the full piece twice, first complete (A), then with one effect missing (B)", real: true }
+];
+const QUIZ_MODES = {
+  free: "Random questions with no end. Each one plays a 6-second ramp of s on one note, ghost voice on, with a single effect at its default depth.",
+  round: `A fixed round of ${KEYS.length * ROUND_EACH} questions: each effect appears exactly ${ROUND_EACH} times, in random order, with the same listening as free practice. At the end you see your score for each effect.`,
+  levels: `Five levels of increasing difficulty, ${LEVEL_Q} questions each. Get at least ${LEVEL_PASS} right to move up; otherwise the level starts again.`,
+  adaptive: "Random questions with the same listening as free practice, but every mistake puts that effect back in the queue: it returns more often until you recognise it twice in a row. The quiz ends when every effect is learned."
+};
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const pick = a => a[Math.floor(Math.random() * a.length)];
+function rampJob(keys, { ghost = true, scale = 1 } = {}) {
+  const fx = Object.assign({}, NOFX); keys.forEach(k => { fx[k] = DEF.fx[k] * scale; });
+  return { dur: 6, partials: DEF.partials, fx, voices: [voice({ ghost: ghost ? DEF.ghost : 0, s: { type: "ramp", from: 0, to: 1 } })] };
+}
+// the last `years` years of the full chord, with the given effects
+function excerptJob(fx, years = 6) {
+  const from = Math.max(0, NY - years);
+  return { dur: (NY - from) * DEF.spy, partials: DEF.partials, fx, beat: { vol: DEF.beat, accent: DEF.accent, spy: DEF.spy, startYear: YEARS[from] },
+    voices: NAMES.map(n => voice({ f0: chordOf(n).f0, dir: chordOf(n).dir, pan: chordOf(n).pan, ghost: DEF.ghost,
+      s: { type: "curve", values: sLinear(n, COMMON).slice(from), spy: DEF.spy, gamma: DEF.gamma } })) };
+}
+function buildQuiz(t) {
+  const Q = { mode: "free" };
+  const learned = k => Q.streak[k] >= 2 && Q.debt[k] === 0;
+  function reset() {
+    Object.assign(Q, { q: null, answered: true, sel: new Set(), right: 0, total: 0, msg: "",
+      deck: shuffle(KEYS.flatMap(k => Array(ROUND_EACH).fill(k))), i: 0, per: Object.fromEntries(KEYS.map(k => [k, { right: 0, total: 0 }])),
+      level: 0, lq: 0, lright: 0,
+      debt: Object.fromEntries(KEYS.map(k => [k, 0])), streak: Object.fromEntries(KEYS.map(k => [k, 0])), finished: false });
+  }
+  reset();
+  chips(t, { label: "Quiz mode", options: [["free", "Free practice"], ["round", "Round of 10"], ["levels", "Levels"], ["adaptive", "Adaptive"]], value: Q.mode,
+    onChange: v => { stopAudio(); Q.mode = v; reset(); fb.textContent = "Press Start to hear the first question."; prepAnswers(); render(); } });
+  const modeNote = el("p", { class: "scale-note" }); t.append(modeNote);
+  const fb = el("p", { class: "feedback", "aria-live": "polite", text: "Press Start to hear the first question." });
+  const ans = el("div", { class: "chips" });
+  const btns = Object.fromEntries(KEYS.map(k => { const b = el("button", { type: "button", class: "chip", text: FX_NAMES[k], disabled: "" }); b.addEventListener("click", () => choose(k)); ans.append(b); return [k, b]; }));
+  const check = el("button", { type: "button", class: "btn", text: "Check", hidden: "" }); check.addEventListener("click", () => submit([...Q.sel]));
+  const status = el("p", { class: "quiz-status", "aria-live": "polite" });
+  const main = listen(t, { label: "Start", run: b => {
+    if (!Q.q || Q.answered) { nextQuestion(); prepAnswers(); fb.textContent = Q.q.prompt; render(); }
+    playJobs(b, Q.q.jobs, Q.q.type === "missing" ? "A complete · B one effect missing" : "quiz");
+  } });
+  t.append(ans, el("div", { class: "actions" }, [check]), fb, status);
+
+  function adaptivePick() {
+    const owed = KEYS.filter(k => Q.debt[k] > 0), open = KEYS.filter(k => !learned(k));
+    if (owed.length && Math.random() < 0.75) {
+      let r = Math.random() * owed.reduce((a, k) => a + Q.debt[k], 0);
+      for (const k of owed) { r -= Q.debt[k]; if (r <= 0) return k; }
+    }
+    const pool = open.length ? open : KEYS; let k;
+    do { k = pick(pool); } while (pool.length > 1 && Q.q && k === Q.q.keys[0] && Math.random() < 0.7);
+    return k;
+  }
+  function nextQuestion() {
+    if ((Q.mode === "round" && Q.i >= Q.deck.length) || (Q.mode === "levels" && Q.level >= LEVELS.length) || (Q.mode === "adaptive" && Q.finished)) reset();
+    const L = Q.mode === "levels" ? LEVELS[Q.level] : null;
+    let keys, type = "single";
+    if (Q.mode === "free") { let k; do { k = pick(KEYS); } while (Q.q && k === Q.q.keys[0] && Math.random() < 0.7); keys = [k]; }
+    else if (Q.mode === "round") keys = [Q.deck[Q.i]];
+    else if (Q.mode === "adaptive") keys = [adaptivePick()];
+    else if (L.pair) { keys = shuffle(KEYS.slice()).slice(0, 2); type = "pair"; }
+    else if (L.real) { keys = [pick(KEYS)]; type = "missing"; }
+    else keys = [pick(KEYS)];
+    let jobs, prompt;
+    if (type === "missing") {
+      jobs = [excerptJob(Object.assign({}, DEF.fx)), excerptJob(Object.assign({}, DEF.fx, { [keys[0]]: 0 }))];
+      prompt = "You hear A, a pause, then B. Which effect is missing in B?";
+    } else {
+      jobs = [rampJob(keys, L ? { ghost: L.ghost, scale: L.scale } : {})];
+      prompt = type === "pair" ? "Two effects are on. Pick both, then press Check." : "Which effect do you hear?";
+    }
+    Q.q = { keys, type, jobs, prompt }; Q.answered = false; Q.sel = new Set(); Q.msg = "";
+  }
+  function prepAnswers() {
+    const live = Q.q && !Q.answered, pair = live && Q.q.type === "pair";
+    KEYS.forEach(k => { const b = btns[k]; b.disabled = !live; b.classList.remove("right", "wrong"); if (pair) b.setAttribute("aria-pressed", "false"); else b.removeAttribute("aria-pressed"); });
+    check.hidden = !pair; check.disabled = true;
+  }
+  function choose(k) {
+    if (!Q.q || Q.answered) return;
+    if (Q.q.type !== "pair") { submit([k]); return; }
+    if (Q.sel.has(k)) Q.sel.delete(k); else if (Q.sel.size < 2) Q.sel.add(k);
+    KEYS.forEach(x => btns[x].setAttribute("aria-pressed", String(Q.sel.has(x))));
+    check.disabled = Q.sel.size !== 2;
+  }
+  function submit(chosen) {
+    if (!Q.q || Q.answered) return;
+    Q.answered = true;
+    const want = Q.q.keys, ok = chosen.length === want.length && chosen.every(k => want.includes(k));
+    KEYS.forEach(k => { const b = btns[k]; b.disabled = true; b.removeAttribute("aria-pressed"); if (want.includes(k)) b.classList.add("right"); else if (chosen.includes(k)) b.classList.add("wrong"); });
+    check.hidden = true;
+    Q.total++; if (ok) Q.right++;
+    const names = want.map(k => FX_NAMES[k]).join(" and ");
+    fb.textContent = (ok ? "Correct. " : `It was ${names}. `) + want.map(k => `${FX_NAMES[k]}: ${FX_CUES[k]}`).join(" ");
+    record(want, chosen, ok); render();
+  }
+  function record(want, chosen, ok) {
+    if (Q.mode === "round") { Q.per[want[0]].total++; if (ok) Q.per[want[0]].right++; Q.i++; }
+    if (Q.mode === "levels") {
+      Q.lq++; if (ok) Q.lright++;
+      if (Q.lq >= LEVEL_Q) {
+        const L = LEVELS[Q.level];
+        if (Q.lright >= LEVEL_PASS) { Q.msg = `${L.name} passed, ${Q.lright} of ${LEVEL_Q}.`; Q.level++; }
+        else Q.msg = `${Q.lright} of ${LEVEL_Q} is not enough to move up, so ${L.name} starts again.`;
+        Q.lq = 0; Q.lright = 0;
+      }
+    }
+    if (Q.mode === "adaptive") {
+      const k = want[0];
+      if (ok) { Q.debt[k] = Math.max(0, Q.debt[k] - 1); Q.streak[k]++; }
+      else { Q.debt[k] += 2; Q.streak[k] = 0; chosen.forEach(c => { if (c !== k) Q.debt[c] += 1; }); }
+      Q.finished = KEYS.every(learned);
+    }
+  }
+  function render() {
+    modeNote.textContent = QUIZ_MODES[Q.mode];
+    const waiting = !Q.q || Q.answered;
+    let label = waiting ? (Q.q ? "Next question" : "Start") : "Play the question again", s = "";
+    if (Q.mode === "free") s = Q.total ? `<b>${Q.right} of ${Q.total}</b> correct` : "";
+    if (Q.mode === "round") {
+      const done = Q.i >= Q.deck.length;
+      s = done ? `<b>Round complete: ${Q.right} of ${Q.total}.</b> ` + KEYS.map(k => `${FX_NAMES[k]} ${Q.per[k].right}/${Q.per[k].total}`).join(" · ")
+               : `Question ${Math.min(Q.deck.length, Q.i + (waiting ? 0 : 1))} of ${Q.deck.length} · ${Q.right} correct`;
+      if (done && waiting) label = "Start a new round";
+    }
+    if (Q.mode === "levels") {
+      if (Q.level >= LEVELS.length) { s = `<b>All five levels passed.</b> ${Q.msg}`; if (waiting) label = "Start again"; }
+      else { const L = LEVELS[Q.level]; s = `<b>${L.name}</b>: ${L.note}. Question ${Q.lq + (waiting ? 0 : 1)} of ${LEVEL_Q} · ${Q.lright} correct${Q.msg ? ". " + Q.msg : ""}`; }
+    }
+    if (Q.mode === "adaptive") {
+      s = KEYS.map(k => learned(k) ? `${FX_NAMES[k]} ✓` : Q.debt[k] ? `${FX_NAMES[k]}: ${Q.debt[k]} more` : `${FX_NAMES[k]} ${Q.streak[k]}/2`).join(" · ");
+      if (Q.finished) { s = `<b>Every effect learned.</b> ` + s; if (waiting) label = "Start again"; }
+    }
+    status.innerHTML = s;
+    main.lastChild.nodeValue = label;
+  }
+  render();
+}
+
 addSlide({
   id: "listening", label: "Listening", eyebrow: "Step 10 · Recognising",
   title: "Recognising the effects",
@@ -1132,20 +1286,7 @@ addSlide({
     } });
     t.append(el("div", { class: "divider" }));
     t.append(el("p", { class: "sub", text: "Quiz" }));
-    const q = { key: null, right: 0, total: 0, done: false }, keys = Object.keys(FX_NAMES);
-    const fb = el("p", { class: "feedback", "aria-live": "polite", text: "Listen to a ramp with a single effect and guess which one it is." });
-    const ans = el("div", { class: "chips" });
-    const btns = keys.map(k => { const b = el("button", { type: "button", class: "chip", text: FX_NAMES[k], disabled: "" }); b.addEventListener("click", () => answer(k, b)); ans.append(b); return b; });
-    const job = () => ({ dur: 6, partials: DEF.partials, fx: Object.assign({}, NOFX, { [q.key]: DEF.fx[q.key] }), voices: [voice({ ghost: DEF.ghost, s: { type: "ramp", from: 0, to: 1 } })] });
-    listen(t, { label: "New question", run: b => { let k; do { k = keys[Math.floor(Math.random() * keys.length)]; } while (k === q.key && Math.random() < 0.7);
-      q.key = k; q.done = false; fb.textContent = "Which effect do you hear?"; btns.forEach(x => { x.disabled = false; x.classList.remove("right", "wrong"); }); playJobs(b, [job()], "quiz"); } },
-      [{ label: "Play again", run: b => { if (q.key) playJobs(b, [job()], "quiz"); } }]);
-    t.append(ans, fb);
-    function answer(k, b) {
-      if (q.done) return; q.done = true; q.total++;
-      if (k === q.key) { q.right++; b.classList.add("right"); fb.textContent = `Correct · ${q.right} of ${q.total}. ${FX_NAMES[k]}: ${FX_CUES[k]}`; }
-      else { b.classList.add("wrong"); btns[keys.indexOf(q.key)].classList.add("right"); fb.textContent = `It was ${FX_NAMES[q.key]} · ${q.right} of ${q.total}. ${FX_CUES[q.key]}`; }
-    }
+    buildQuiz(t);
   }
 });
 
