@@ -1,0 +1,132 @@
+<meta charset="utf-8">
+<title>Off Key</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a single reading column. With a concept in the address (glossary.html#id) the page shows only that concept and its sub-sections; without one it shows the index of all concepts. */
+:root {
+  --bg: #f6f6fa;
+  --surface: #ffffff;
+  --ink: #15161f;
+  --muted: #6b6f83;
+  --line: #e7e8f0;
+  --accent: #5a4ae0;
+  --accent-soft: #efedff;
+  --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --font-text: "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #0d0e14; --surface: #15161f; --ink: #ececf3; --muted: #9094aa; --line: #252735; --accent: #a396ff; --accent-soft: #211e3c; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --bg: #0d0e14; --surface: #15161f; --ink: #ececf3; --muted: #9094aa; --line: #252735; --accent: #a396ff; --accent-soft: #211e3c; color-scheme: dark; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg); color: var(--ink); font: 16px/1.65 var(--font-text); -webkit-font-smoothing: antialiased; margin: 0;
+  padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px));
+  padding-block: 24px 64px;
+}
+.wrap { max-width: 720px; margin: 0 auto; display: grid; gap: 28px; }
+.top { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }
+.mark { font: 600 0.95rem var(--font-display); letter-spacing: -0.01em; }
+.mark span { color: var(--muted); font-weight: 500; }
+.top nav { display: flex; gap: 18px; }
+a { color: var(--accent); text-underline-offset: 3px; }
+.top a { font-size: 0.9rem; font-weight: 500; }
+.eyebrow { font: 500 0.75rem var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); margin: 0 0 6px; }
+h1 { font: 600 clamp(2rem, 5vw, 2.8rem)/1.08 var(--font-display); letter-spacing: -0.03em; margin: 0 0 18px; text-wrap: balance; }
+.concept p { margin: 0 0 14px; max-width: 66ch; }
+.sub { margin-top: 26px; padding: 18px 20px; border-radius: 14px; background: var(--surface); scroll-margin-top: 24px; transition: box-shadow 0.4s; }
+.sub.hit { box-shadow: 0 0 0 2px var(--accent); }
+.sub h2 { font: 600 1.15rem var(--font-display); margin: 0 0 8px; letter-spacing: -0.01em; }
+.sub p:last-child { margin-bottom: 0; }
+.more { border-top: 1px solid var(--line); padding-top: 18px; display: grid; gap: 10px; }
+.more p { margin: 0; font: 500 0.75rem var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: 500 0.85rem var(--font-text); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; text-decoration: none; }
+.chip:hover { border-color: var(--accent); color: var(--accent); }
+.index h1 { margin-bottom: 8px; }
+.index .intro { color: var(--muted); margin: 0 0 8px; max-width: 60ch; }
+.group { display: grid; gap: 10px; margin-top: 22px; }
+.group > p { margin: 0; font: 500 0.75rem var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
+.entry { background: var(--surface); border-radius: 14px; padding: 14px 18px; }
+.entry a.root { font: 600 1.05rem var(--font-display); text-decoration: none; color: var(--ink); }
+.entry a.root:hover { color: var(--accent); }
+.entry .subs { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 4px; font-size: 0.88rem; }
+.entry .subs a { color: var(--muted); }
+.entry .subs a:hover { color: var(--accent); }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <span class="mark">Off Key <span>· Glossary</span></span>
+    <nav><a href="glossary.html" id="toIndex">All concepts</a><a href="./" id="back">← Back to the tutorial</a></nav>
+  </header>
+  <main id="page" tabindex="-1"></main>
+</div>
+
+<script src="glossary-data.js"></script>
+<script>
+(function () {
+"use strict";
+const DATA = window.OFFKEY_GLOSSARY || [];
+const page = document.getElementById("page"), toIndex = document.getElementById("toIndex");
+const el = (tag, attrs = {}, kids = []) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) { if (k === "text") e.textContent = v; else e.setAttribute(k, v); }
+  for (const c of [].concat(kids)) if (c != null) e.append(c);
+  return e;
+};
+// where each id lives: a root concept, or a sub-section of one
+const ROOT = {};
+DATA.forEach(g => g.concepts.forEach(c => { ROOT[c.id] = { group: g, concept: c }; (c.subs || []).forEach(s => { ROOT[s.id] = { group: g, concept: c, sub: s.id }; }); }));
+
+function showIndex() {
+  document.title = "Off Key";
+  toIndex.hidden = true;
+  page.className = "index";
+  page.append(el("h1", { text: "Glossary" }), el("p", { class: "intro", text: "Every concept Off Key uses. Each one has its own page with an example; narrower ideas are sections of the concept they belong to." }));
+  DATA.forEach(g => page.append(el("section", { class: "group" }, [el("p", { text: g.group }),
+    ...g.concepts.map(c => el("div", { class: "entry" }, [el("a", { class: "root", href: `#${c.id}`, text: c.title }),
+      c.subs && c.subs.length ? el("div", { class: "subs" }, c.subs.map(s => el("a", { href: `#${s.id}`, text: s.title }))) : null]))])));
+}
+function showConcept(hit) {
+  const { group, concept, sub } = hit;
+  toIndex.hidden = false;
+  page.className = "concept";
+  page.append(el("p", { class: "eyebrow", text: group.group }), el("h1", { text: concept.title }), ...concept.text.map(t => el("p", { text: t })));
+  (concept.subs || []).forEach(s => page.append(el("section", { class: "sub" + (s.id === sub ? " hit" : ""), id: `sec-${s.id}` }, [el("h2", { text: s.title }), ...s.text.map(t => el("p", { text: t }))])));
+  const others = group.concepts.filter(c => c !== concept);
+  if (others.length) page.append(el("nav", { class: "more", "aria-label": "Other concepts" }, [el("p", { text: `More in ${group.group}` }),
+    el("div", { class: "chips" }, others.map(c => el("a", { class: "chip", href: `#${c.id}`, text: c.title })))]));
+  if (sub) { const s = document.getElementById(`sec-${sub}`); if (s) s.scrollIntoView({ block: "start" }); } else window.scrollTo({ top: 0 });
+}
+function render() {
+  page.textContent = "";
+  const hit = ROOT[decodeURIComponent(location.hash.slice(1))];
+  if (hit) showConcept(hit); else { showIndex(); window.scrollTo({ top: 0 }); }
+  page.focus({ preventScroll: true });
+}
+window.addEventListener("hashchange", render);
+render();
+
+// "Back" returns to the step the reader came from when possible, otherwise to the start of the tutorial
+// Links inside this page only change the hash, so each history entry remembers how many
+// glossary entries deep it is; Back then jumps over all of them in one go.
+let depth = (history.state && history.state.depth) || 1;
+try { history.replaceState({ depth }, ""); } catch (err) {}
+window.addEventListener("hashchange", () => {
+  if (history.state && history.state.depth) depth = history.state.depth;
+  else { depth += 1; try { history.replaceState({ depth }, ""); } catch (err) {} }
+});
+const back = document.getElementById("back");
+back.addEventListener("click", e => {
+  let fromTutorial = false;
+  try { const r = new URL(document.referrer); fromTutorial = r.origin === location.origin && !/(glossary|lab)\.html$/.test(r.pathname); } catch (err) {}
+  if (fromTutorial && history.length > depth) { e.preventDefault(); history.go(-depth); }
+});
+})();
+</script>
