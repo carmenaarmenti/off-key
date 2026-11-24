@@ -1002,6 +1002,77 @@ addSlide({
   }
 });
 
+const FX_NAMES = { detune: "Detune", jitter: "Jitter", inharm: "Inarmonicità", bright: "Spectral tilt", fold: "Wavefolding" };
+const FX_CUES = {
+  detune: "battimenti regolari con il fantasma, che accelerano in modo uniforme.",
+  jitter: "altezza instabile e battimenti irregolari, senza un ritmo.",
+  inharm: "la fondamentale resta, ma sopra compaiono componenti che non si fondono: altezza ambigua, timbro metallico.",
+  bright: "il suono diventa più chiaro e tagliente, senza cambiare altezza né stabilità.",
+  fold: "cambia la grana: da liscia a ronzante e ruvida, con salti di asprezza."
+};
+
+addSlide({
+  id: "ascolto", chain: "Ascolto", kicker: "Passo 10 · Riconoscere",
+  title: "Ascolto guidato: riconoscere gli effetti nel brano",
+  text: `
+    <p>Nel brano completo tutti gli effetti agiscono insieme, ciascuno con la propria profondità e la stessa s(t). Per riconoscerli servono due esercizi.</p>
+    <h3>1. Sottrazione</h3>
+    <p>Ascolta il brano completo, poi spegni un effetto alla volta e riascolta. Quello che scompare è il contributo di quell'effetto. Concentrati sugli ultimi anni (2022–2025), dove s è più alta.</p>
+    <h3>2. Riconoscimento</h3>
+    <p>Il quiz suona una rampa di s da 0 a 1 su una nota con un solo effetto attivo, scelto a caso, e la voce fantasma accesa. Indica di quale effetto si tratta.</p>
+    <h3>Indizi</h3>
+    <ul>
+      <li><b>Detune</b>: ${FX_CUES.detune}</li>
+      <li><b>Jitter</b>: ${FX_CUES.jitter}</li>
+      <li><b>Inarmonicità</b>: ${FX_CUES.inharm}</li>
+      <li><b>Spectral tilt</b>: ${FX_CUES.bright}</li>
+      <li><b>Wavefolding</b>: ${FX_CUES.fold}</li>
+    </ul>
+    <p>Gli effetti si distinguono per <b>che cosa</b> cambiano: l'altezza (detune, jitter), la coerenza tra le parziali (inarmonicità), l'equilibrio timbrico (spectral tilt), la grana della forma d'onda (wavefolding).</p>`,
+  build(lab) {
+    const on = { detune: true, jitter: true, inharm: true, bright: true, fold: true, ghost: true };
+    lab.append(el("p", { class: "lab-title", text: "Esercizio 1 · sottrazione" }));
+    const row = el("div", { class: "plays" }); lab.append(row);
+    Object.keys(FX_NAMES).forEach(k => check(row, FX_NAMES[k], true, v => { on[k] = v; }));
+    check(row, "Voci fantasma", true, v => { on.ghost = v; });
+    const yr = el("div", { class: "readout" }, [el("div", { html: "<span>anno in ascolto:</span> —" })]);
+    plays(lab, [{ label: "Brano completo con gli effetti selezionati", primary: true, onClick: () => {
+      const fx = {}; Object.keys(FX_NAMES).forEach(k => fx[k] = on[k] ? DEF.fx[k] : 0);
+      const off = Object.keys(FX_NAMES).filter(k => !on[k]).map(k => FX_NAMES[k]);
+      playJobs([fullPieceJob({ fx, ghost: on.ghost ? DEF.ghost : 0 })], off.length ? "Senza: " + off.join(", ") : "Brano completo",
+        p => { yr.firstChild.innerHTML = `<span>anno in ascolto:</span> ${p ? YEARS[Math.min(19, Math.floor(p.t))] : "—"}`; });
+    } }]);
+    lab.append(yr);
+
+    lab.append(el("p", { class: "lab-title", text: "Esercizio 2 · quiz" }));
+    const quiz = el("div", { class: "quiz" }); lab.append(quiz);
+    const q = { key: null, right: 0, total: 0, answered: false };
+    const score = el("div", { class: "readout" }), fb = el("div", { class: "feedback", "aria-live": "polite" });
+    const answers = el("div", { class: "answers" });
+    const keys = Object.keys(FX_NAMES);
+    const btns = keys.map(k => { const b = el("button", { type: "button", text: FX_NAMES[k], disabled: "", onclick: () => answer(k, b) }); answers.append(b); return b; });
+    const playQ = () => playJobs([{ dur: 6, partials: DEF.partials, fx: Object.assign({}, NOFX, { [q.key]: DEF.fx[q.key] }), voices: [voice({ ghost: DEF.ghost, s: { type: "ramp", from: 0, to: 1 } })] }], "Quiz: quale effetto?");
+    function newQ() {
+      let k; do { k = keys[Math.floor(Math.random() * keys.length)]; } while (k === q.key && Math.random() < 0.7);
+      q.key = k; q.answered = false; fb.textContent = "Ascolta e scegli l'effetto.";
+      btns.forEach(b => { b.disabled = false; b.className = ""; });
+      playQ();
+    }
+    function answer(k, b) {
+      if (q.answered) return;
+      q.answered = true; q.total++;
+      if (k === q.key) { q.right++; b.className = "right"; fb.textContent = `Giusto: ${FX_NAMES[k]}. Indizio: ${FX_CUES[k]}`; }
+      else { b.className = "wrong"; btns[keys.indexOf(q.key)].className = "right"; fb.textContent = `Era ${FX_NAMES[q.key]}: ${FX_CUES[q.key]}`; }
+      score.innerHTML = `<div><span>risposte corrette:</span> ${q.right} su ${q.total}</div>`;
+    }
+    score.innerHTML = `<div><span>risposte corrette:</span> 0 su 0</div>`;
+    quiz.append(el("div", { class: "plays" }, [
+      el("button", { type: "button", class: "primary", text: "Nuovo quesito", onclick: newQ }),
+      el("button", { type: "button", text: "Riascolta", onclick: () => { if (q.key) playQ(); } })
+    ]), answers, fb, score);
+  }
+});
+
 // @slides-end
 
 // ---------------- navigazione ----------------
