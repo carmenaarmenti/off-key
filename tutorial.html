@@ -828,7 +828,14 @@ effectSlide({
   formula: ["Δc = dir · D · s + J · s · n(t)"],
   hear: "The note floats without rhythm, and the beats keep changing speed.",
   more: `<p>n(t) is Gaussian noise, low-pass filtered (three moving averages, standard deviation about 30 ms) and normalised to −1…+1: the pitch glides without jumps. J is the depth (±20 cents by default).</p>
-    <p>Unlike <b>vibrato</b>, which is periodic and regular (5–7 Hz) and heard as expressive, jitter has no period and is heard as instability. In frequency it is small (±20 cents at 220 Hz ≈ ±2.5 Hz): it hardly shows in the spectrogram, but you can hear it. Detune is off on this slide, so jitter wanders around f₀.</p>`,
+    <p>Unlike <b>vibrato</b>, which is periodic and regular (5–7 Hz) and heard as expressive, jitter has no period and is heard as instability. In frequency it is small (±20 cents at 220 Hz ≈ ±2.5 Hz): it hardly shows in the spectrogram, but you can hear it. Detune is off on this slide, so jitter wanders around f₀.</p>
+    <p><b>A worked example.</b> J sets the widest swing, reached only at s = 1; below that, the swing shrinks in proportion to s. With the defaults (f₀ = 220 Hz, J = ±20 cents):</p>
+    <ul>
+      <li>at s = 0.60 the pitch can move at most ±12 cents (20 × 0.60), so it stays between about 218.5 and 221.5 Hz;</li>
+      <li>at s = 1 it can move ±20 cents, between about 217.5 and 222.6 Hz.</li>
+    </ul>
+    <p>These are the limits, not the usual values. The noise reaches its extremes only now and then, so most of the time the pitch is closer to the centre.</p>
+    <p><b>In musical terms</b>, for readers who work with intervals: 100 cents make a semitone, so ±12 cents is about an eighth of a semitone either way. On its own that is a small deviation, but against a steady reference such as the ghost voice it is clearly audible as unsteady beating.</p>`,
   depth: { label: "Depth J", min: 0, max: 60, step: 1, value: DEF.fx.jitter, fmt: v => "±" + v + " cents" },
   draw(ctx, w, h, st, s) {
     const amp = st.depth * s;
@@ -846,7 +853,15 @@ effectSlide({
   formula: ["fₖ = k · f · √(1 + B · s · k²)"],
   hear: "The fundamental stays, but above it appear components that no longer fuse with it.",
   more: `<p>This is the physical model of a <b>stiff string</b>: stiffness raises the frequency of the higher modes, as happens slightly in piano strings. With B = 2.5‰ and s = 1 the 2nd partial rises 0.5%, the 10th 11.8% (about 2 semitones), the 20th 41%. The shift grows with k².</p>
-    <p>The auditory system groups partials in whole-number ratios into one note. When the ratios stop being whole numbers, the grouping weakens: ambiguous pitch, metallic timbre, as in bells and gongs. In the tool's spectrogram the ridges bend upwards and fan out.</p>`,
+    <p>The auditory system groups partials in whole-number ratios into one note. When the ratios stop being whole numbers, the grouping weakens: ambiguous pitch, metallic timbre, as in bells and gongs. In the tool's spectrogram the ridges bend upwards and fan out.</p>
+    <p><b>A worked example.</b> The percentages on the right are frequency shifts: how far each partial sits above its harmonic position k · f₀. With the defaults (f₀ = 220 Hz, B = 2.5‰, s = 0.60):</p>
+    <ul>
+      <li>the 2nd partial should be at 440 Hz; with +0.3% it is at about 441 Hz;</li>
+      <li>the 10th partial should be at 2200 Hz; with +7.2% it is at about 2359 Hz;</li>
+      <li>the 20th partial should be at 4400 Hz; with +26.5% it is at about 5566 Hz.</li>
+    </ul>
+    <p>At s = 1 the same partials move to about 442 Hz (+0.5%), 2460 Hz (+11.8%) and 6223 Hz (+41.4%). The fundamental itself does not move, which is why the note keeps a recognisable base while its upper partials drift away.</p>
+    <p><b>In musical terms</b>, for readers who work with intervals: a frequency ratio converts to cents with cents = 1200 · log₂(ratio), and 100 cents make a semitone. At s = 0.60 the 2nd partial moves about 5 cents (barely audible), the 10th about 121 cents (just over a semitone) and the 20th about 407 cents (a little more than a major third). At s = 1 the 10th moves about 193 cents (almost a whole tone) and the 20th about 600 cents (a tritone). High partials a third or a tritone away from where they belong are what stop the ear from hearing a single, clear pitch.</p>`,
   depth: { label: "Coefficient B", min: 0, max: 6, step: 0.1, value: DEF.fx.inharm, fmt: v => fmtN(v, 1) + "‰" },
   draw(ctx, w, h, st, s) {
     const ghost = partialsOf({ f0: st.f0, N: DEF.partials });
