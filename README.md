@@ -6,14 +6,17 @@ Off Key is a sonification of submissions to ICSE, FSE and ASE from 2006 to 2025.
 
 It has two pages: **Anatomy of Strangeness**, a step-by-step tutorial on how the sound is built, and **Submissions in Sound**, the full tool.
 
+**Live site:** https://carmenaarmenti.github.io/off-key/ (the tutorial; its last step opens the tool at `lab.html`).
+
 ## Files
 
 | File | Contents |
 |---|---|
 | `tutorial.html` | "Anatomy of Strangeness": a slide tutorial, one effect per slide, with audio experiments on a single note and a recognition quiz. Its first step accepts your own three series as CSV (`year,<name>,<name>,<name>`, one row per consecutive year) |
-| `lab.html` | The full tool: every parameter, a 3D spectrogram, a time bar and settings export |
+| `lab.html` | The full tool: every parameter, a 3D spectrogram, a Pitch view, a time bar, and settings you can save to and load from a JSON file |
 | `sonify.py` | Renders WAV files with the same model, reading settings exported from the tool |
-| `build.sh` | Packages the tutorial and the tool for publishing as one page with two views |
+| `build.sh` | Packages the two pages, either for claude.ai or, with `--site`, for an ordinary web host |
+| `.github/workflows/pages.yml` | Builds the site and publishes it to GitHub Pages on every push to `main` |
 
 ## Model
 
@@ -77,6 +80,21 @@ Package the pages for publishing:
 ```bash
 ./build.sh dist
 ```
+
+## Deploying
+
+The site is published by GitHub Pages. Every push to `main` runs the workflow in `.github/workflows/pages.yml`, which builds the pages with `build.sh --site` and deploys them; there is nothing to do by hand. Pages must be enabled once in the repository settings: **Settings → Pages → Source: GitHub Actions**.
+
+To build the site locally and look at it before pushing:
+
+```bash
+./build.sh _site --site
+python3 -m http.server --directory _site
+```
+
+Then open http://localhost:8000.
+
+Settings saved from the tool (`settings.json`) can be loaded back into it later, or passed to `sonify.py` to render the same configuration as WAV files.
 
 ## Data sources
 
