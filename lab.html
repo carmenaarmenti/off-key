@@ -223,7 +223,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-v
           <div class="keys" id="keys"></div>
         </div>
         <canvas id="chart" aria-label="Submissions per year and strangeness curve. Click to jump to a year."></canvas>
-        <p class="help">Top: submissions per year. Bottom: strangeness (0–1) computed with the current settings. Click a year to jump there.</p>
+        <p class="help">Top: submissions per year; the shaded area is the baseline period and the dashed lines are each conference's baseline. Bottom: strangeness (0–1) computed with the current settings. Click a year to jump there.</p>
       </div>
 
       <div class="foot">
@@ -251,7 +251,7 @@ const CHORD = [
   { name: "FSE",  f0: 165.00, pan:  0.0, dir:  1 },
   { name: "ASE",  f0: 220.00, pan:  0.7, dir:  1 }
 ];
-const BASE_END = 2015;
+const BASE_END = 2015; // default end of the baseline period
 const SINN = 8192, SIN = new Float32Array(SINN + 1);
 for (let i = 0; i <= SINN; i++) SIN[i] = Math.sin(2 * Math.PI * i / SINN);
 let lastMono = null, lastSR = 44100;
@@ -271,7 +271,7 @@ function smooth(a, sigma) {
 }
 function median(arr) { const s = arr.slice().sort((a, b) => a - b); const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; }
 function anomaly(vals, p) {
-  const norm = median(vals.filter((_, i) => YEARS[i] <= BASE_END));
+  const norm = median(vals.filter((_, i) => YEARS[i] <= (p.baseEnd || BASE_END)));
   // per-conference saturation (single conferences only): strangeness reaches 1 in the peak year
   const sat = p.satMode === "own" && p.mode !== "chord"
     ? Math.max(0.05, Math.max(...vals) / norm - p.threshold) : p.saturate;
@@ -472,7 +472,7 @@ const DEFAULTS = {
   sr: 44100, mode: "chord", source: "data", secPerYear: 1.0,
   beat: 0.5, beatAccent: true,
   threshold: 1.25, saturate: 1.4, gamma: 1.3,
-  ghost: 0.35, baseFreq: 220, partials: 28, satMode: "own", breath: false,
+  ghost: 0.35, baseFreq: 220, partials: 28, satMode: "own", breath: false, baseEnd: 2015,
   fx: {
     detune: { on: true, amt: 90 },
     jitter: { on: true, amt: 20 },
@@ -595,8 +595,10 @@ controls.append(
       "Adds a low 62 Hz thump to the beat in 2010, 2015, 2020 and 2025, to help you find your place in time.")
   ]),
   section("From data to strangeness", [
+    slider({ id: "baseEnd", label: "Baseline period", min: 2006, max: 2024, step: 1, get: () => P.baseEnd, set: v => P.baseEnd = v, fmt: v => v === 2006 ? "2006 only" : `2006–${v}`,
+      help: "The years treated as the normal past. Each conference's baseline is the median of its submissions over these years, and every year is then measured against it. Ending the period later folds part of the recent growth into the baseline, so less of it sounds strange; ending it earlier makes the growth stand out more. The default is 2006–2015." }),
     slider({ id: "thr", label: "Threshold", min: 1, max: 2, step: 0.05, get: () => P.threshold, set: v => P.threshold = v, fmt: v => `${v.toFixed(2)}× baseline`,
-      help: "Strangeness starts above this multiple of the baseline, the median of the conference's 2006–2015 submissions. Below it, variation from year to year counts as normal and s stays at 0. For example, 1.25 means 25% above the baseline." }),
+      help: "Strangeness starts above this multiple of the baseline, the median of the conference's submissions over the baseline period. Below it, variation from year to year counts as normal and s stays at 0. For example, 1.25 means 25% above the baseline." }),
     slider({ id: "sat", label: "Saturation", min: 0.3, max: 3, step: 0.05, get: () => P.saturate, set: v => P.saturate = v, fmt: v => `max at ${(P.threshold + v).toFixed(2)}×`,
       help: "How far above the threshold strangeness reaches 1: s = (submissions / baseline − threshold) / saturation, capped at 1. Lower values make the sound break sooner. Not used with the per-conference scale." }),
     choice("satMode", "Saturation scale", [["common", "Shared"], ["own", "Per conference"]], () => P.satMode, v => { P.satMode = v; if (P.mode !== "chord") schedule("render"); },
@@ -825,12 +827,20 @@ function drawChart() {
   // years
   cctx.textAlign = "center"; cctx.textBaseline = "top";
   YEARS.forEach((y, i) => { if (y % 5 === 0 || i === 0) cctx.fillText(String(y), xs(i), bot1 + 6); });
+  // baseline period: shaded years and each conference's baseline as a dashed line
+  const baseIdx = Math.max(0, Math.min(YEARS.length - 1, P.baseEnd - YEARS[0]));
+  const xb = x0 + (baseIdx + 1) / YEARS.length * (x1 - x0);
+  cctx.fillStyle = css("--plot-bg"); cctx.fillRect(x0, top0, xb - x0, top1 - top0);
+  cctx.fillStyle = ink; cctx.textAlign = "left"; cctx.textBaseline = "top"; cctx.fillText(baseIdx ? `baseline ${YEARS[0]}–${P.baseEnd}` : "baseline 2006", x0 + 6, top0 + 4);
+  const med = a => { const s = a.slice().sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
   // series
   const single = renderedMode !== "chord";
   for (const n of NAMES) {
     const c = voiceColor(n);
     cctx.globalAlpha = single && n !== renderedMode ? 0.25 : 1;
-    cctx.strokeStyle = c; cctx.lineWidth = 2; cctx.beginPath();
+    const norm = med(DATA[n].slice(0, baseIdx + 1));
+    cctx.strokeStyle = c; cctx.lineWidth = 1; cctx.setLineDash([4, 4]); cctx.beginPath(); cctx.moveTo(x0, ys(norm)); cctx.lineTo(x1, ys(norm)); cctx.stroke(); cctx.setLineDash([]);
+    cctx.lineWidth = 2; cctx.beginPath();
     DATA[n].forEach((v, i) => i ? cctx.lineTo(xs(i), ys(v)) : cctx.moveTo(xs(i), ys(v))); cctx.stroke();
     cctx.fillStyle = c; DATA[n].forEach((v, i) => { cctx.beginPath(); cctx.arc(xs(i), ys(v), 2.2, 0, 7); cctx.fill(); });
     if (curves[n]) {
