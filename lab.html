@@ -626,11 +626,27 @@ function syncAll() { updaters.forEach(f => f()); }
 syncAll();
 
 // ---------- worker ----------
-let worker = null;
-try {
-  const src = document.getElementById("synth-worker").textContent;
-  worker = new Worker(URL.createObjectURL(new Blob([src], { type: "text/javascript" })));
-} catch (e) { setStatus("This browser cannot compute the audio here.", false); }
+// The engine runs in a Web Worker. If the host page refuses or stalls the worker,
+// the same code runs on the main thread instead, so the tool keeps working.
+const ENGINE_SRC = document.getElementById("synth-worker").textContent;
+const worker = (() => {
+  let eng = null, inline = false, last = null, watchdog = null;
+  const deliver = e => { clearTimeout(watchdog); onEngineMessage(e); };
+  const useInline = () => {
+    if (inline) return;
+    inline = true; clearTimeout(watchdog);
+    try { if (eng && eng.terminate) eng.terminate(); } catch (e) {}
+    const scope = { onmessage: null, postMessage: d => setTimeout(() => deliver({ data: d }), 0) };
+    new Function("self", ENGINE_SRC)(scope);
+    eng = { postMessage: d => setTimeout(() => scope.onmessage({ data: d }), 0) };
+    if (last) eng.postMessage(last);
+  };
+  try {
+    eng = new Worker(URL.createObjectURL(new Blob([ENGINE_SRC], { type: "text/javascript" })));
+    eng.onmessage = deliver; eng.onerror = useInline;
+  } catch (e) { useInline(); }
+  return { postMessage(d) { last = d; if (!inline) { clearTimeout(watchdog); watchdog = setTimeout(useInline, 8000); } eng.postMessage(d); } };
+})();
 let busy = false, queued = null, jobId = 0, timer = null;
 function schedule(kind) {
   if (kind === "mesh") { updateMesh(); return; }
@@ -646,7 +662,7 @@ function request(kind) {
   else worker.postMessage({ type: "spec", id, view: { ...P.view } });
 }
 let audio = null, curves = {}, spec = null;
-if (worker) worker.onmessage = e => {
+function onEngineMessage(e) {
   const m = e.data; busy = false;
   if (m.type === "render") {
     const old = audio; audio = { L: m.L, R: m.R, SR: m.SR, dur: m.dur, buffer: null };
@@ -657,7 +673,7 @@ if (worker) worker.onmessage = e => {
   spec = m.spec; updateMesh(); buildKeys(); buildMeters(); drawChart();
   setStatus(`Ready · computed in ${(m.ms / 1000).toLocaleString("en-US", { maximumFractionDigits: 1 })} s`, false);
   if (queued) { const k = queued; queued = null; request(k); }
-};
+}
 function setStatus(t, isBusy) {
   document.getElementById("statusText").textContent = t;
   document.getElementById("status").classList.toggle("busy", isBusy);
@@ -675,7 +691,7 @@ function ensureBuffer() {
 function startPlayback(from) {
   if (!audio) return;
   if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
-  actx.resume();
+  if (actx.state !== "running") actx.resume().then(() => { if (actx.state !== "running") setStatus("The browser is holding the audio back: press play again.", false); }, () => {});
   stopNode();
   const node = actx.createBufferSource();
   node.buffer = ensureBuffer(); node.loop = loopOn; node.connect(actx.destination);

@@ -396,10 +396,32 @@ function axes(ctx, w, h, o) {
 const line = (ctx, pts, color, width = 2, dash = []) => { ctx.strokeStyle = color; ctx.lineWidth = width; ctx.setLineDash(dash); ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke(); ctx.setLineDash([]); ctx.lineWidth = 1; };
 
 // ---------------- synthesis and playback ----------------
-const worker = new Worker(URL.createObjectURL(new Blob([document.getElementById("engine").textContent], { type: "text/javascript" })));
-let jobSeq = 0; const pending = new Map();
-worker.onmessage = e => { const r = pending.get(e.data.id); pending.delete(e.data.id); if (r) r(e.data); };
-const synth = job => new Promise(res => { const id = ++jobSeq; pending.set(id, res); worker.postMessage({ id, job: Object.assign({ sr: DEF.sr }, job) }); });
+// The engine runs in a Web Worker. If the host page refuses or stalls the worker,
+// the same code runs on the main thread instead, so audio still plays.
+const ENGINE_SRC = document.getElementById("engine").textContent;
+let jobSeq = 0, engine = null, inline = false, watchdog = null;
+const pending = new Map(); // id -> { msg, res }
+const onEngine = e => { const p = pending.get(e.data.id); pending.delete(e.data.id); if (p) p.res(e.data); };
+function useInline() {
+  if (inline) return;
+  inline = true; clearTimeout(watchdog);
+  try { if (engine && engine.terminate) engine.terminate(); } catch (e) {}
+  const scope = { onmessage: null, postMessage: d => setTimeout(() => onEngine({ data: d }), 0) };
+  new Function("self", ENGINE_SRC)(scope);
+  engine = { postMessage: d => setTimeout(() => scope.onmessage({ data: d }), 0) };
+  for (const p of pending.values()) engine.postMessage(p.msg);
+}
+try {
+  engine = new Worker(URL.createObjectURL(new Blob([ENGINE_SRC], { type: "text/javascript" })));
+  engine.onmessage = e => { clearTimeout(watchdog); onEngine(e); };
+  engine.onerror = useInline;
+} catch (e) { useInline(); }
+const synth = job => new Promise(res => {
+  const id = ++jobSeq, msg = { id, job: Object.assign({ sr: DEF.sr }, job) };
+  pending.set(id, { msg, res });
+  if (!inline) { clearTimeout(watchdog); watchdog = setTimeout(useInline, 8000); }
+  engine.postMessage(msg);
+});
 const voice = (o = {}) => Object.assign({ f0: DEF.f0, dir: 1, pan: 0, ghost: 0, s: { type: "const", v: 0 } }, o);
 const C = v => ({ type: "const", v });
 
@@ -415,11 +437,22 @@ function stopAudio() {
 // btn: the button pressed (pressing it again stops the audio)
 async function playJobs(btn, jobs, label, progress) {
   if (btn && btn === activeBtn) { stopAudio(); return; }
-  if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
-  actx.resume(); stopAudio();
+  try {
+    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state !== "running") {
+      // unlock audio inside the click itself: some browsers only allow it there
+      actx.resume();
+      const b = actx.createBuffer(1, 1, 22050), s = actx.createBufferSource(); s.buffer = b; s.connect(actx.destination); s.start(0);
+    }
+  } catch (e) { nowEl.textContent = "This browser cannot play audio here."; return; }
+  stopAudio();
   const my = token; activeBtn = btn; if (btn) btn.classList.add("on"); nowEl.textContent = "computing…";
-  const clips = await Promise.all(jobs.map(synth));
+  let clips;
+  try { clips = await Promise.all(jobs.map(synth)); }
+  catch (e) { if (my === token) { stopAudio(); nowEl.textContent = "The sound could not be computed. Reload the page and try again."; } return; }
   if (my !== token) return;
+  if (actx.state !== "running") { try { await actx.resume(); } catch (e) {} }
+  if (actx.state !== "running") { stopAudio(); nowEl.textContent = "The browser is holding the audio back: press play again."; return; }
   const sr = clips[0].sr, gap = Math.round(0.4 * sr);
   const total = clips.reduce((a, c) => a + c.L.length, 0) + gap * (clips.length - 1);
   const buf = actx.createBuffer(2, total, sr), l = buf.getChannelData(0), r = buf.getChannelData(1);
