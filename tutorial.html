@@ -39,6 +39,8 @@
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
+/* hidden elements stay hidden even where a rule sets their display (e.g. canvases in the stage) */
+[hidden] { display: none !important; }
 body {
   background: var(--bg); color: var(--ink); font: 15px/1.6 var(--font-text); -webkit-font-smoothing: antialiased;
   padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px));
