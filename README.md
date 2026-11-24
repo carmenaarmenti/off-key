@@ -13,6 +13,8 @@ It has two pages: **Anatomy of Strangeness**, a step-by-step tutorial on how the
 | File | Contents |
 |---|---|
 | `tutorial.html` | "Anatomy of Strangeness": a slide tutorial, one effect per slide, with audio experiments on a single note and a recognition quiz. Its first step accepts your own three series as CSV (`year,<name>,<name>,<name>`, one row per consecutive year) |
+| `glossary.html` | The glossary: one page per concept, with narrower ideas as its sections, and an index of all concepts |
+| `glossary-data.js` | The concepts themselves, shared by the tutorial (for its links) and the glossary page |
 | `lab.html` | The full tool: every parameter, a 3D spectrogram, a Pitch view, a time bar, and settings you can save to and load from a JSON file |
 | `sonify.py` | Renders WAV files with the same model, reading settings exported from the tool |
 | `build.sh` | Packages the two pages, either for claude.ai or, with `--site`, for an ordinary web host |
@@ -29,7 +31,7 @@ It has two pages: **Anatomy of Strangeness**, a step-by-step tutorial on how the
 
 ## Tutorial
 
-The tutorial opens one step at a time: each step unlocks the next when you press "Got it", and the steps not reached yet stay hidden. A **Glossary** link in the header opens a side panel with every concept used (strangeness, partials, cents, beating, inharmonicity, intermodulation, aliasing and more), each with a fuller explanation and an example. Every step lists its own concepts as links to the matching entries.
+The tutorial opens one step at a time: each step unlocks the next when you press "Got it", and the steps not reached yet stay hidden. A **Glossary** link in the header opens the glossary page. Every step lists its own concepts as links; each link opens the page of that concept only, with its explanation, an example and its narrower ideas as sections (for instance *Strangeness* holds baseline, threshold, saturation, exponent γ and smoothing). A link to one of those narrower ideas opens the concept it belongs to, at that section. **Back to the tutorial** returns to the step you came from. The tool has the same link back to the tutorial.
 
 ### Quiz
 
