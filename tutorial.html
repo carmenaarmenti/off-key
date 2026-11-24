@@ -886,6 +886,68 @@ effectSlide({
   }
 });
 
+// s di una conferenza in un anno, scala comune (come nell'accordo)
+const sYear = (name, i) => Math.pow(sLinear(name, { threshold: DEF.threshold, saturate: DEF.saturate, satMode: "common" })[i], DEF.gamma);
+
+addSlide({
+  id: "accordo", chain: "Fantasma e accordo", kicker: "Passo 8 · Riferimento e mix",
+  title: "La voce fantasma e l'accordo delle tre conferenze",
+  text: `
+    <p>Dopo il wavefolding, a ogni nota si aggiunge la sua <b>voce fantasma</b>: la stessa nota di partenza (stessa f₀, stesse parziali armoniche con ampiezze k<sup>−2,2</sup>), senza alcun effetto e costante per tutta la durata. Viene sommata dopo il wavefolding, quindi non viene distorta e non intermodula con la nota. Il suo volume relativo predefinito è 0,35.</p>
+    <p>Il fantasma rende percepibili gli effetti che, da soli, sarebbero ambigui. Uno spostamento di altezza, senza riferimento, suona come un'altra nota; accanto al fantasma produce battimenti. Allo stesso modo, il fantasma mantiene udibile la nota «com'era», mentre la nota reale si deforma.</p>
+    <h3>L'accordo</h3>
+    <p>Nella versione completa le tre conferenze suonano insieme, ognuna con la propria s(t), i propri effetti e il proprio fantasma:</p>
+    <ul>
+      <li><b>ICSE</b>: La2, 110 Hz, a sinistra, detune verso il basso;</li>
+      <li><b>FSE</b>: Mi3, 165 Hz, al centro, detune verso l'alto;</li>
+      <li><b>ASE</b>: La3, 220 Hz, a destra, detune verso l'alto.</li>
+    </ul>
+    <p>Gli intervalli di partenza sono una quinta giusta (165 : 110 = 3 : 2) e un'ottava (220 : 110 = 2 : 1). Sono rapporti interi, quindi molte parziali delle tre note coincidono esattamente e l'accordo iniziale non ha battimenti. Quando le note si spostano in direzioni opposte, le parziali che coincidevano si separano e producono battimenti anche tra una conferenza e l'altra.</p>
+    <p>Nell'accordo si usa sempre la scala comune, così le tre deformazioni sono confrontabili. Ogni voce viene posizionata nello spazio stereo con un panorama a potenza costante p: guadagno sinistro √((1 − p) / 2), destro √((1 + p) / 2).</p>
+    <div class="listen"><b>Cosa ascoltare</b><p>Nel 2006 l'accordo è fermo e consonante. Scegli un anno recente: ogni conferenza si deforma in misura diversa, e si sentono battimenti sia con i fantasmi sia tra le note. Togli i fantasmi per sentire quanto contribuiscono.</p></div>`,
+  build(lab) {
+    const st = { i: 17, ghost: DEF.ghost, on: { ICSE: true, FSE: true, ASE: true } };
+    lab.append(el("p", { class: "lab-title", text: "Esperimento · accordo in un anno" }));
+    const ctls = el("div", { class: "ctls" }); lab.append(ctls);
+    slider(ctls, { label: "Anno", cls: "s-ctl", min: 0, max: 19, step: 1, value: st.i, fmt: i => String(YEARS[i]), onInput: v => { st.i = v; redraw(); }, help: "Ogni conferenza prende la s di quell'anno (scala comune)." });
+    slider(ctls, { label: "Volume voci fantasma", min: 0, max: 1, step: 0.05, value: st.ghost, fmt: v => v ? Math.round(v * 100) + "%" : "spente", onInput: v => { st.ghost = v; redraw(); } });
+    const vbox = el("div", { class: "ctl" }, [el("label", { text: "Voci attive" })]); const vrow = el("div", { class: "plays" }); vbox.append(vrow); ctls.append(vbox);
+    NAMES.forEach(n => check(vrow, n, true, v => { st.on[n] = v; redraw(); }));
+    const bars = plot(lab, 110, (ctx, w, h) => {
+      const a = axes(ctx, w, h, { x0: 0, x1: 1, y0: -0.5, y1: 2.5, xTicks: [0, 0.5, 1], xFmt: v => "s = " + fmtN(v, 1), m: { l: 52 } });
+      NAMES.forEach((n, j) => { const s = sYear(n, st.i), y = a.Y(2 - j); ctx.fillStyle = css(`--${n.toLowerCase()}`); ctx.globalAlpha = st.on[n] ? 1 : 0.25; ctx.fillRect(a.X(0), y - 9, a.X(s) - a.X(0), 18); ctx.globalAlpha = 1; ctx.fillStyle = css("--ink"); ctx.textAlign = "right"; ctx.textBaseline = "middle"; ctx.fillText(n, a.m.l - 6, y); ctx.textAlign = "left"; ctx.fillText(fmtN(s), a.X(s) + 6, y); });
+    }, "Stranezza di ogni conferenza nell'anno scelto.");
+    const spec = plot(lab, 200, (ctx, w, h) => {
+      const fmax = 2500, ghost = [];
+      NAMES.forEach(n => { if (st.on[n]) ghost.push(...partialsOf({ f0: CHORD[n].f0, N: DEF.partials })); });
+      const a = drawSpectrum(ctx, w, h, { fmax, ghost: st.ghost > 0 ? ghost : [], parts: [] });
+      NAMES.forEach(n => {
+        if (!st.on[n]) return;
+        ctx.strokeStyle = ctx.fillStyle = css(`--${n.toLowerCase()}`); ctx.lineWidth = 1.5;
+        for (const p of partialsOf({ f0: CHORD[n].f0, N: DEF.partials, s: sYear(n, st.i), dir: CHORD[n].dir, fx: DEF.fx })) {
+          if (p.f > fmax) continue; const y = a.Y(Math.max(-70, db(p.a))); ctx.beginPath(); ctx.moveTo(a.X(p.f), a.Y(-70)); ctx.lineTo(a.X(p.f), y); ctx.stroke(); ctx.beginPath(); ctx.arc(a.X(p.f), y, 2.4, 0, 7); ctx.fill();
+        }
+      });
+      ctx.lineWidth = 1;
+    }, "Parziali delle tre note (colori delle conferenze) sopra quelle dei fantasmi (grigio), fino a 2,5 kHz. Il wavefolding e il jitter non sono rappresentati.");
+    const ro = el("div", { class: "readout" }); lab.append(ro);
+    function redraw() {
+      bars.redraw(); spec.redraw();
+      ro.innerHTML = NAMES.map(n => { const s = sYear(n, st.i), c = CHORD[n].dir * DEF.fx.detune * s;
+        return `<div><span>${n}:</span> f₀ ${CHORD[n].f0} Hz · Δc ${c >= 0 ? "+" : ""}${fmtN(c, 0)} cent · B·s ${fmtN(DEF.fx.inharm * s, 2)}‰ · ${fmtN(-6.02 * (2.2 - DEF.fx.bright * s), 1)} dB/ott · g ×${fmtN(1 + DEF.fx.fold * s, 1)}</div>`; }).join("");
+    }
+    redraw();
+    const job = (i, ghost) => ({ dur: 3, partials: DEF.partials, fx: DEF.fx,
+      voices: NAMES.filter(n => st.on[n]).map(n => voice({ f0: CHORD[n].f0, dir: CHORD[n].dir, pan: CHORD[n].pan, ghost, s: { type: "const", v: sYear(n, i) } })) });
+    plays(lab, [
+      { label: "Accordo nell'anno scelto", primary: true, onClick: () => playJobs([job(st.i, st.ghost)], `Accordo ${YEARS[st.i]}`) },
+      { label: "A/B: 2006, poi l'anno scelto", onClick: () => playJobs([job(0, st.ghost), job(st.i, st.ghost)], `A: 2006 · B: ${YEARS[st.i]}`) },
+      { label: "Stesso anno senza fantasmi", onClick: () => playJobs([job(st.i, 0)], `Accordo ${YEARS[st.i]} senza fantasmi`) },
+      { label: "Solo i fantasmi", onClick: () => playJobs([{ dur: 3, partials: DEF.partials, fx: NOFX, voices: NAMES.filter(n => st.on[n]).map(n => voice({ f0: CHORD[n].f0, pan: CHORD[n].pan, ghost: 1, note: false })) }], "Accordo dei fantasmi") }
+    ]);
+  }
+});
+
 // @slides-end
 
 // ---------------- navigazione ----------------
