@@ -1016,8 +1016,15 @@ effectSlide({
   lead: "The waveform is amplified and, past the limit, folded back on itself. New partials appear.",
   formula: ["g = 1 + G · s", "y = (1 − s) · x + s · sin(π/2 · g · x)"],
   hear: "The grain goes from smooth to buzzing, then rough, in steps.",
-  more: `<p>It acts on the waveform that is already summed and normalised (x between −1 and +1). sin(π/2 · g · x) is the transfer function: at g = 1 it is close to a straight line; at higher g, values past the limit are <b>reflected</b> rather than clipped, several times over. Every fold puts a corner in the wave.</p>
-    <p>A nonlinearity creates harmonics and <b>intermodulation</b> (sums and differences between partials). On a harmonic note the products stay harmonic: a richer, rougher sound. On a note that is already inharmonic they land in irregular places: dissonance. High gains also produce aliasing. It is applied to each note before the ghost voice is added, so the ghost stays clean.</p>`,
+  more: `<p>It acts on the waveform that is already summed and normalised (x between −1 and +1). sin(π/2 · g · x) is the ${term("transfer-function", "transfer function")}: at g = 1 it is close to a straight line; at higher g, values past the limit are <b>reflected</b> rather than clipped, several times over. Every fold puts a corner in the wave.</p>
+    <p>A ${term("nonlinearity")} creates new frequencies, of two kinds:</p>
+    <ul>
+      <li><b>harmonics</b>: multiples of the partials already present;</li>
+      <li>${term("intermodulation")}: sums and differences between pairs of partials. For example, partials at 660 and 880 Hz also produce 220 Hz (their difference) and 1540 Hz (their sum).</li>
+    </ul>
+    <p>On a harmonic note these products are again multiples of the fundamental, so the note stays in tune and becomes richer and rougher. On a note that is already inharmonic they land in irregular places, and the result is dissonant.</p>
+    <p>At high gain some new components rise above 22,050 Hz, the highest frequency the audio can hold. They do not vanish: they reflect back down to lower, unrelated frequencies. This is ${term("aliasing")}, and it adds a grainy haze. For example, a component created at 25,000 Hz is heard at 19,100 Hz.</p>
+    <p>Wavefolding is applied to each note before the ghost voice is added, so the ghost stays clean. The underlined terms open a fuller explanation with more examples.</p>`,
   depth: { label: "Depth G", min: 0, max: 10, step: 0.5, value: DEF.fx.fold, fmt: v => "×" + fmtN(1 + v, 1) },
   draw(ctx, w, h, st, s) { drawWave(ctx, w, h, { f0: st.f0, before: cycleOf({ f0: st.f0, N: DEF.partials }, 600, false), cyc: cycleOf({ f0: st.f0, N: DEF.partials, s, fx: { fold: st.depth } }) }); },
   stats(st, s) {
