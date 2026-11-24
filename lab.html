@@ -234,10 +234,12 @@ button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-v
       <div class="foot">
         <div class="export">
           <button id="saveJson">Save settings (.json)</button>
+          <button id="loadJson">Load settings (.json)</button>
           <button id="copyJson">Copy settings</button>
+          <input type="file" id="loadFile" accept=".json,application/json" hidden>
           <span id="toast"></span>
         </div>
-        <p>Use saved settings with <code>python3 sonify.py settings.json</code> to render a high-quality WAV. This page and the script share the same model, but the audio is not identical sample by sample.</p>
+        <p>Save your settings to a JSON file to keep them, and load the file later to pick up where you left off. The same file works with <code>python3 sonify.py settings.json</code> to render a high-quality WAV. This page and the script share the same model, but the audio is not identical sample by sample.</p>
         <p>Data: <a href="https://github.com/emeryberger/csconferences" target="_blank" rel="noopener">emeryberger/csconferences</a>; FSE 2006–2010 from <a href="https://taoxie.cs.illinois.edu/seconferences.htm" target="_blank" rel="noopener">Tao Xie, SE conference statistics</a>.</p>
       </div>
     </section>
@@ -1157,15 +1159,54 @@ document.getElementById("copyJson").addEventListener("click", () => {
   if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(() => say("Settings copied."), () => say("Copying is not allowed here. Use Save settings."));
   else say("Copying is not allowed here. Use Save settings.");
 });
+// Saving: inside claude.ai the page asks the viewer through its downloads capability;
+// on an ordinary website (such as GitHub Pages) it downloads the file directly.
 const saveBtn = document.getElementById("saveJson");
+const inClaude = !!(window.claude && window.claude.use);
 let downloads = null;
+function downloadFile(name, text) {
+  const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+  const a = el("a", { href: url, download: name }); document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 saveBtn.addEventListener("click", async () => {
+  if (!inClaude) { downloadFile("settings.json", settingsJson()); say("Settings saved as settings.json."); return; }
   if (!downloads) { say("Saving is not available in this view. Use Copy settings."); return; }
   try { await downloads.save({ filename: "settings.json", data: settingsJson() }); say("Settings saved."); }
   catch (e) { if (e && e.code !== "declined") say("Saving failed. Use Copy settings."); }
 });
-if (window.claude && window.claude.use) window.claude.use("downloads").then(d => { downloads = d; if (!d) saveBtn.hidden = true; }).catch(() => { saveBtn.hidden = true; });
-else saveBtn.hidden = true;
+if (inClaude) window.claude.use("downloads").then(d => { downloads = d; if (!d) saveBtn.hidden = true; }).catch(() => { saveBtn.hidden = true; });
+
+// Loading: reads a settings file saved earlier and applies the values it knows about
+const loadFile = document.getElementById("loadFile");
+function applySettings(obj) {
+  const merge = (dst, src) => {
+    for (const k of Object.keys(dst)) {
+      if (!(k in src)) continue;
+      const a = dst[k], b = src[k];
+      if (a && typeof a === "object") { if (b && typeof b === "object") merge(a, b); }
+      else if (typeof b === typeof a) dst[k] = b;
+    }
+  };
+  merge(P, obj);
+  if (!["chord", "ICSE", "FSE", "ASE"].includes(P.mode)) P.mode = "chord";
+  if (!["data", "ramp"].includes(P.source)) P.source = "data";
+}
+document.getElementById("loadJson").addEventListener("click", () => loadFile.click());
+loadFile.addEventListener("change", () => {
+  const f = loadFile.files && loadFile.files[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try {
+      const obj = JSON.parse(String(rd.result));
+      if (!obj || typeof obj !== "object" || Array.isArray(obj)) throw new Error("not settings");
+      applySettings(obj); syncAll(); buildAxes(); schedule("render");
+      say(`Loaded ${f.name}.`);
+    } catch (e) { say("That file is not a settings file saved by this tool."); }
+  };
+  rd.onerror = () => say("The file could not be read.");
+  rd.readAsText(f); loadFile.value = "";
+});
 
 // ---------- startup ----------
 const mq = window.matchMedia("(prefers-color-scheme: dark)");
