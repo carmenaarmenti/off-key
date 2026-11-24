@@ -1,5 +1,6 @@
 <meta charset="utf-8">
 <title>Off Key</title>
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
@@ -51,7 +52,8 @@ body {
 /* top bar */
 .top { display: grid; gap: 12px; padding-block: 20px 8px; }
 .top-row { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
-.mark { font: 600 0.95rem var(--font-display); letter-spacing: -0.01em; }
+.mark { font: 600 0.95rem var(--font-display); letter-spacing: -0.01em; color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
+.mark img { display: block; }
 .step-name { font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .progress { display: flex; gap: 4px; }
 .progress button { flex: 1; height: 18px; border: 0; padding: 7px 0; background: none; cursor: pointer; }
@@ -187,7 +189,7 @@ button:focus-visible, input:focus-visible, a:focus-visible, summary:focus-visibl
 <div class="app">
   <header class="top">
     <div class="top-row">
-      <span class="mark">Anatomy of Strangeness</span>
+      <a class="mark" href="./" title="Off Key home"><img src="assets/logo.svg" alt="" width="20" height="20">Anatomy of Strangeness</a>
       <span class="top-right"><span class="step-name" id="stepName"></span><a class="gloss-open" href="glossary.html">Glossary</a></span>
     </div>
     <nav class="progress" id="progress" aria-label="Tutorial steps"></nav>

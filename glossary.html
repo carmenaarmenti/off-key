@@ -1,5 +1,6 @@
 <meta charset="utf-8">
 <title>Off Key</title>
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
@@ -30,7 +31,8 @@ body {
 }
 .wrap { max-width: 720px; margin: 0 auto; display: grid; gap: 28px; }
 .top { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }
-.mark { font: 600 0.95rem var(--font-display); letter-spacing: -0.01em; }
+.mark { font: 600 0.95rem var(--font-display); letter-spacing: -0.01em; color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 7px; }
+.mark img { display: block; }
 .mark span { color: var(--muted); font-weight: 500; }
 .top nav { display: flex; gap: 18px; }
 a { color: var(--accent); text-underline-offset: 3px; }
@@ -62,8 +64,8 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-
 
 <div class="wrap">
   <header class="top">
-    <span class="mark">Off Key <span>· Glossary</span></span>
-    <nav><a href="glossary.html" id="toIndex">All concepts</a><a href="./" id="back">← Back to the tutorial</a></nav>
+    <a class="mark" href="./"><img src="assets/logo.svg" alt="" width="18" height="18">Off Key <span>· Glossary</span></a>
+    <nav><a href="glossary.html" id="toIndex">All concepts</a><a href="tutorial.html" id="back">← Back to the tutorial</a></nav>
   </header>
   <main id="page" tabindex="-1"></main>
 </div>
@@ -113,7 +115,7 @@ function render() {
 window.addEventListener("hashchange", render);
 render();
 
-// "Back" returns to the step the reader came from when possible, otherwise to the start of the tutorial
+// "Back" returns to the step the reader came from when possible, otherwise to the tutorial where the reader left it
 // Links inside this page only change the hash, so each history entry remembers how many
 // glossary entries deep it is; Back then jumps over all of them in one go.
 let depth = (history.state && history.state.depth) || 1;
@@ -125,7 +127,7 @@ window.addEventListener("hashchange", () => {
 const back = document.getElementById("back");
 back.addEventListener("click", e => {
   let fromTutorial = false;
-  try { const r = new URL(document.referrer); fromTutorial = r.origin === location.origin && !/(glossary|lab)\.html$/.test(r.pathname); } catch (err) {}
+  try { const r = new URL(document.referrer); fromTutorial = r.origin === location.origin && /tutorial\.html$/.test(r.pathname); } catch (err) {}
   if (fromTutorial && history.length > depth) { e.preventDefault(); history.go(-depth); }
 });
 })();
