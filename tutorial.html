@@ -805,6 +805,39 @@ effectSlide({
   }
 });
 
+effectSlide({
+  id: "tilt", key: "bright", chain: "Spectral tilt", kicker: "Passo 6 · Ampiezza delle parziali",
+  title: "Spectral tilt: l'equilibrio tra gravi e acuti",
+  depth: { label: "Profondità T", min: 0, max: 2, step: 0.05, value: DEF.fx.bright, fmt: v => `${fmtN(-6.02 * (2.2 - v), 1)} dB/ott a s = 1` },
+  text: `
+    <p>Lo <b>spectral tilt</b> è la pendenza con cui l'ampiezza delle parziali diminuisce al crescere della frequenza. In questa slide non si sposta nessuna parziale: cambia soltanto quanto è forte ciascuna.</p>
+    <div class="formula">
+      <div>Aₖ(t) = k^−α(t),   α(t) = 2,2 − T · s(t)</div>
+      <div>pendenza = −6,02 · α  dB per ottava</div>
+    </div>
+    <p>Ogni raddoppio di k è un'ottava, e l'ampiezza si riduce di un fattore 2<sup>α</sup>. Con s = 0, α = 2,2: −13,2 dB per ottava, spettro ripido, timbro scuro. Con T = 1,2 e s = 1, α = 1: −6 dB per ottava, che è lo spettro di un'onda a dente di sega. La 10ª parziale passa da −44 dB a −20 dB rispetto alla fondamentale.</p>
+    <p>Dopo la somma la forma d'onda viene normalizzata al proprio picco. Rafforzare le parziali acute riduce quindi, in proporzione, il peso della fondamentale.</p>
+    <h3>Perché si percepisce</h3>
+    <p>La distribuzione dell'energia tra gravi e acuti è il principale correlato della <b>brillantezza</b> percepita, misurata dal centroide spettrale (la frequenza media pesata per l'ampiezza). Spostare energia verso l'alto rende il suono più chiaro, nasale e tagliente, senza cambiarne l'altezza.</p>
+    <p>Lo spectral tilt amplifica anche gli effetti precedenti: inarmonicità e battimenti sono più marcati proprio nelle parziali alte, che questo effetto rende più udibili.</p>
+    <div class="listen"><b>Cosa ascoltare</b><p>L'altezza e la stabilità non cambiano. Cambia la «luce» del suono: da scuro e ovattato a brillante e penetrante. Confronta A/B per sentire il cambiamento di timbro a parità di nota.</p></div>`,
+  visual(lab, st, sv) {
+    const spec = plot(lab, 210, (ctx, w, h) => {
+      const fmax = 5000, alpha = 2.2 - st.depth * sv();
+      const a = drawSpectrum(ctx, w, h, { fmax, ghost: partialsOf({ f0: st.f0, N: DEF.partials }), parts: partialsOf({ f0: st.f0, N: DEF.partials, s: sv(), fx: { bright: st.depth } }) });
+      const slope = (al, color, dash) => { ctx.strokeStyle = color; ctx.setLineDash(dash); ctx.lineWidth = 1.5; ctx.beginPath(); for (let f = st.f0; f <= fmax; f += 20) { const y = a.Y(Math.max(-70, -6.02 * al * Math.log2(f / st.f0))); f === st.f0 ? ctx.moveTo(a.X(f), y) : ctx.lineTo(a.X(f), y); } ctx.stroke(); ctx.setLineDash([]); ctx.lineWidth = 1; };
+      slope(2.2, css("--ghost"), [4, 4]); slope(alpha, css("--accent"), [4, 4]);
+    }, "Grigio: ampiezze di partenza (−13,2 dB/ottava). Colore: ampiezze con il tilt attuale. Le curve tratteggiate sono le due pendenze.");
+    return [spec];
+  },
+  readout(st, s) {
+    const al = 2.2 - st.depth * s, cen = al2 => { const ps = partialsOf({ f0: st.f0, N: DEF.partials, s: 1, fx: { bright: 2.2 - al2 } }); const sa = ps.reduce((x, p) => x + p.a, 0); return ps.reduce((x, p) => x + p.f * p.a, 0) / sa; };
+    return `<div><span>α =</span> ${fmtN(al)} · <span>pendenza:</span> ${fmtN(-6.02 * al, 1)} dB/ottava</div>
+      <div><span>10ª parziale:</span> ${fmtN(-20 * al, 1)} dB <span>(partenza −44,0 dB)</span></div>
+      <div><span>centroide spettrale:</span> ${Math.round(cen(al))} Hz <span>(partenza ${Math.round(cen(2.2))} Hz)</span></div>`;
+  }
+});
+
 // @slides-end
 
 // ---------------- navigazione ----------------
