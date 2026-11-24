@@ -1,0 +1,153 @@
+<meta charset="utf-8">
+<title>Off Key</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one centred column. The logo and the name, one paragraph, a button that plays the whole piece, then the two ways in: the tutorial and the tool. */
+:root {
+  --bg: #f6f6fa;
+  --surface: #ffffff;
+  --ink: #15161f;
+  --muted: #6b6f83;
+  --line: #e7e8f0;
+  --accent: #5a4ae0;
+  --accent-ink: #ffffff;
+  --accent-soft: #efedff;
+  --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --font-text: "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #0d0e14; --surface: #15161f; --ink: #ececf3; --muted: #9094aa; --line: #252735; --accent: #a396ff; --accent-ink: #14122a; --accent-soft: #211e3c; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --bg: #0d0e14; --surface: #15161f; --ink: #ececf3; --muted: #9094aa; --line: #252735; --accent: #a396ff; --accent-ink: #14122a; --accent-soft: #211e3c; color-scheme: dark; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg); color: var(--ink); font: 16px/1.65 var(--font-text); -webkit-font-smoothing: antialiased; margin: 0;
+  padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 680px; min-height: 100vh; margin: 0 auto; padding-block: clamp(40px, 10vh, 96px) 32px; display: flex; flex-direction: column; gap: 40px; }
+.hero { display: grid; gap: 18px; }
+.logo { width: 76px; height: 76px; margin-left: -6px; }
+.logo path { fill: none; stroke: var(--accent); stroke-width: 4.5; stroke-linejoin: round; stroke-linecap: round; }
+h1 { font: 600 clamp(2.6rem, 8vw, 3.6rem)/1 var(--font-display); letter-spacing: -0.035em; margin: 0; }
+.tagline { font: 500 1.1rem/1.4 var(--font-display); color: var(--muted); margin: -6px 0 0; }
+.lead { margin: 0; max-width: 58ch; }
+.listen { display: flex; align-items: center; gap: 14px; }
+.play { width: 48px; height: 48px; border-radius: 50%; border: 0; padding: 0; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; cursor: pointer; flex: none; transition: transform 0.15s; }
+.play:hover { transform: scale(1.05); }
+.play svg { width: 18px; height: 18px; fill: currentColor; }
+.listen-text { display: grid; gap: 6px; min-width: 0; flex: 1; max-width: 320px; }
+.listen-text b { font-weight: 500; font-size: 0.95rem; }
+.listen-text small { font: 0.78rem var(--font-mono); color: var(--muted); }
+.bar { height: 3px; border-radius: 2px; background: var(--line); overflow: hidden; }
+.bar span { display: block; height: 100%; width: 0; background: var(--accent); }
+.ways { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.way { display: grid; gap: 8px; align-content: start; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 22px 22px 20px; color: inherit; text-decoration: none; transition: border-color 0.15s, transform 0.15s; }
+.way:hover { border-color: var(--accent); transform: translateY(-2px); }
+.way .eyebrow { font: 500 0.72rem var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
+.way h2 { font: 600 1.3rem/1.2 var(--font-display); letter-spacing: -0.015em; margin: 0; }
+.way p { margin: 0; color: var(--muted); font-size: 0.93rem; }
+.way .go { margin-top: 6px; font-weight: 500; font-size: 0.92rem; color: var(--accent); }
+footer { margin-top: auto; padding-top: 18px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 6px 20px; font-size: 0.84rem; color: var(--muted); }
+footer a { color: var(--muted); text-underline-offset: 3px; }
+footer a:hover { color: var(--accent); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 8px; }
+@media (prefers-reduced-motion: no-preference) { .hero, .ways { animation: rise 0.5s ease-out both; } .ways { animation-delay: 0.08s; } @keyframes rise { from { opacity: 0; transform: translateY(8px); } } }
+</style>
+
+<div class="wrap">
+  <header class="hero">
+    <svg class="logo" id="logo" viewBox="0 0 64 64" role="img" aria-label="Off Key logo: a sine wave that folds"><path id="logoPath"/></svg>
+    <h1>Off Key</h1>
+    <p class="tagline">An anatomy of strangeness in conference submissions</p>
+    <p class="lead">Twenty years of submissions to ICSE, FSE and ASE, played as a chord. Each conference is a note. As its submissions move away from what used to be normal, the note goes out of tune, wavers, turns metallic and breaks up.</p>
+    <div class="listen">
+      <button type="button" class="play" id="play" aria-label="Play the piece"><svg viewBox="0 0 20 20" id="icon"><path d="M5 3l12 7-12 7z"/></svg></button>
+      <div class="listen-text">
+        <b id="listenLabel">Listen to 2006–2025</b>
+        <div class="bar" aria-hidden="true"><span id="bar"></span></div>
+        <small id="listenNote">20 seconds, one year per second. Headphones help.</small>
+      </div>
+    </div>
+  </header>
+
+  <nav class="ways" aria-label="Ways in">
+    <a class="way" href="tutorial.html" id="toTutorial">
+      <span class="eyebrow">Step by step</span>
+      <h2>Learn how it works</h2>
+      <p>One effect at a time, each with an experiment to play with, then a listening quiz. About ten minutes.</p>
+      <span class="go" id="tutorialGo">Start the tutorial →</span>
+    </a>
+    <a class="way" href="lab.html">
+      <span class="eyebrow">All at once</span>
+      <h2>Go to the tool</h2>
+      <p>Every control together, a 3D spectrogram and a pitch view. Use your own settings and save them.</p>
+      <span class="go">Open the tool →</span>
+    </a>
+  </nav>
+
+  <footer>
+    <a href="glossary.html">Glossary</a>
+    <a href="https://github.com/carmenaarmenti/off-key" target="_blank" rel="noopener">Source on GitHub</a>
+    <span>Data: <a href="https://github.com/emeryberger/csconferences" target="_blank" rel="noopener">emeryberger/csconferences</a>, <a href="https://taoxie.cs.illinois.edu/seconferences.htm" target="_blank" rel="noopener">Tao Xie</a></span>
+  </footer>
+</div>
+
+<audio id="audio" src="assets/off-key-chord.m4a" preload="none"></audio>
+
+<script>
+(function () {
+"use strict";
+// The logo is the model's wavefolding applied to a sine, with strangeness rising from left to right:
+// y = (1 − s)·x + s·sin(π/2 · (1 + G·s) · x). While the piece plays, the fold grows with it.
+const logoPath = document.getElementById("logoPath");
+function drawLogo(amount) {
+  const n = 180, pts = [];
+  for (let i = 0; i <= n; i++) {
+    const t = i / n, x = Math.sin(2 * Math.PI * 2 * t);
+    const s = amount * Math.pow(Math.min(1, Math.max(0, (t - 0.45) / 0.55)), 1.3);
+    const y = (1 - s) * x + s * Math.sin(Math.PI / 2 * (1 + 2.2 * s) * x);
+    pts.push((7 + 50 * t).toFixed(1) + " " + (32 - 18 * y).toFixed(1));
+  }
+  logoPath.setAttribute("d", "M" + pts.join(" "));
+}
+drawLogo(1);
+
+// A reader who has already started the tutorial picks it up where they left it.
+try { if (parseInt(localStorage.getItem("anatomia-reached") || "0", 10) > 0) document.getElementById("tutorialGo").textContent = "Continue the tutorial →"; } catch (err) {}
+
+const audio = document.getElementById("audio"), play = document.getElementById("play"), icon = document.getElementById("icon");
+const bar = document.getElementById("bar"), label = document.getElementById("listenLabel"), note = document.getElementById("listenNote");
+const PLAY = '<path d="M5 3l12 7-12 7z"/>', PAUSE = '<path d="M5 3h3.5v14H5zM11.5 3H15v14h-3.5z"/>';
+let raf = 0;
+function tick() {
+  const d = audio.duration || 20, p = Math.min(1, audio.currentTime / d);
+  bar.style.width = (p * 100).toFixed(1) + "%";
+  label.textContent = "Now playing " + Math.min(2025, 2006 + Math.floor(audio.currentTime));
+  drawLogo(p);
+  if (!audio.paused) raf = requestAnimationFrame(tick);
+}
+function reset() {
+  cancelAnimationFrame(raf);
+  icon.innerHTML = PLAY; play.setAttribute("aria-label", "Play the piece");
+  label.textContent = "Listen to 2006–2025"; drawLogo(1);
+}
+play.addEventListener("click", () => {
+  if (audio.paused) {
+    if (audio.ended) audio.currentTime = 0;
+    audio.play().then(() => {
+      icon.innerHTML = PAUSE; play.setAttribute("aria-label", "Pause");
+      raf = requestAnimationFrame(tick);
+    }).catch(() => { note.textContent = "The audio could not start in this browser."; });
+  } else {
+    audio.pause(); cancelAnimationFrame(raf);
+    icon.innerHTML = PLAY; play.setAttribute("aria-label", "Resume");
+  }
+});
+audio.addEventListener("ended", () => { bar.style.width = "100%"; reset(); });
+})();
+</script>
