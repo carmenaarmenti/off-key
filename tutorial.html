@@ -838,6 +838,54 @@ effectSlide({
   }
 });
 
+effectSlide({
+  id: "wavefolding", key: "fold", chain: "Wavefolding", kicker: "Passo 7 · Forma d'onda",
+  title: "Wavefolding: ripiegare la forma d'onda",
+  depth: { label: "Profondità G", min: 0, max: 10, step: 0.5, value: DEF.fx.fold, fmt: v => `guadagno fino a ×${fmtN(1 + v, 1)}` },
+  text: `
+    <p>Gli effetti precedenti agivano sulle singole parziali. Il wavefolding agisce invece sulla <b>forma d'onda</b> già sommata e normalizzata, x(t) compresa tra −1 e +1, con una funzione non lineare:</p>
+    <div class="formula">
+      <div>g(t) = 1 + G · s(t)</div>
+      <div>y(t) = (1 − s) · x(t) + s · sin(π/2 · g · x(t))</div>
+    </div>
+    <p>sin(π/2 · g · x) è la <b>funzione di trasferimento</b>. Con g = 1 è vicina a una retta. Quando g cresce, i valori di x che porterebbero l'argomento oltre π/2 non vengono tagliati, come in un limitatore, ma <b>ripiegati</b> all'indietro, e con g alto più volte. Ogni ripiegamento crea un angolo nella forma d'onda. La miscela con (1 − s) · x rende graduale il passaggio.</p>
+    <h3>Che cosa aggiunge allo spettro</h3>
+    <p>Ogni trasformazione non lineare genera frequenze nuove:</p>
+    <ul>
+      <li>multipli delle parziali esistenti (armoniche);</li>
+      <li>somme e differenze tra coppie di parziali (<b>intermodulazione</b>).</li>
+    </ul>
+    <p>Su una nota armonica, come in questa slide, i nuovi prodotti cadono ancora su multipli interi di f₀: il suono resta intonato, ma diventa più ricco e ruvido. Su una nota già resa inarmonica, i prodotti cadono in posizioni irregolari e generano dissonanza. Con guadagni alti alcune componenti superano la metà della frequenza di campionamento e si riflettono verso il basso (<b>aliasing</b>), aggiungendo rumore.</p>
+    <p>Il wavefolding viene applicato a ogni nota separatamente, prima di aggiungere la voce fantasma e prima del mix. Così il fantasma resta pulito e le tre conferenze non si distorcono a vicenda.</p>
+    <div class="listen"><b>Cosa ascoltare</b><p>La «grana» del suono cambia: da liscia a ronzante, poi ruvida e quasi elettrica. Con la rampa si sentono i momenti in cui si aggiunge un nuovo ripiegamento, come salti di asprezza.</p></div>`,
+  visual(lab, st, sv) {
+    const fx = () => ({ fold: st.depth });
+    const tf = plot(lab, 160, (ctx, w, h) => {
+      const s = sv(), g = 1 + st.depth * s;
+      const a = axes(ctx, w, h, { x0: -1, x1: 1, y0: -1.1, y1: 1.1, xTicks: [-1, 0, 1], yTicks: [-1, 0, 1], xLabel: "ingresso x", yLabel: "uscita y", m: { l: 40 } });
+      ctx.strokeStyle = css("--ghost"); ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(a.X(-1), a.Y(-1)); ctx.lineTo(a.X(1), a.Y(1)); ctx.stroke(); ctx.setLineDash([]);
+      ctx.strokeStyle = css("--accent"); ctx.lineWidth = 2; ctx.beginPath();
+      for (let i = 0; i <= 400; i++) { const x = -1 + i / 200, y = (1 - s) * x + s * Math.sin(Math.PI / 2 * g * x); i ? ctx.lineTo(a.X(x), a.Y(y)) : ctx.moveTo(a.X(x), a.Y(y)); }
+      ctx.stroke(); ctx.lineWidth = 1;
+    }, "Funzione di trasferimento: la retta tratteggiata lascia il segnale invariato, la curva lo ripiega.");
+    const wave = plot(lab, 130, (ctx, w, h) => drawWave(ctx, w, h, { f0: st.f0, before: cycleOf({ f0: st.f0, N: DEF.partials }, 600, false), cyc: cycleOf({ f0: st.f0, N: DEF.partials, s: sv(), fx: fx() }) }),
+      "Forma d'onda prima (grigio) e dopo (colore) il ripiegamento.");
+    const spec = plot(lab, 170, (ctx, w, h) => {
+      const before = harmonicsOf(cycleOf({ f0: st.f0, N: DEF.partials }, 600, false)), after = harmonicsOf(cycleOf({ f0: st.f0, N: DEF.partials, s: sv(), fx: fx() }));
+      const ref = before[0], toParts = arr => arr.map((a, i) => ({ f: (i + 1) * st.f0, a }));
+      drawSpectrum(ctx, w, h, { fmax: Math.min(12000, st.f0 * 60), ref, ghost: toParts(before), parts: toParts(after) });
+    }, "Spettro di un periodo prima (grigio) e dopo (colore): compaiono armoniche oltre la 28ª.");
+    return [tf, wave, spec];
+  },
+  readout(st, s) {
+    const g = 1 + st.depth * s, folds = g > 1 ? Math.ceil((g - 1) / 2 - 1e-9) : 0;
+    const hs = harmonicsOf(cycleOf({ f0: st.f0, N: DEF.partials, s, fx: { fold: st.depth } }));
+    const tot = hs.reduce((a, v) => a + v * v, 0), hi = hs.slice(DEF.partials).reduce((a, v) => a + v * v, 0);
+    return `<div><span>guadagno g = 1 + G · s =</span> ${fmtN(g)} · <span>ripiegamenti per semionda:</span> ${folds}</div>
+      <div><span>energia oltre la 28ª armonica (componenti nuove):</span> ${fmtN(100 * hi / (tot || 1), 1)}%</div>`;
+  }
+});
+
 // @slides-end
 
 // ---------------- navigazione ----------------
