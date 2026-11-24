@@ -517,8 +517,8 @@ addSlide({
       const bw = (a.X(1) - a.X(0)) * 0.7, col = css(`--${o.name.toLowerCase()}`);
       r.forEach((v, i) => { ctx.globalAlpha = sl[i] > 0 ? 1 : 0.35; ctx.fillStyle = col; ctx.fillRect(a.X(i) - bw / 2, a.Y(v), bw, a.Y(0) - a.Y(v)); });
       ctx.globalAlpha = 1;
-      const hline = (v, c, label, dash) => { ctx.strokeStyle = c; ctx.setLineDash(dash); ctx.beginPath(); ctx.moveTo(a.m.l, a.Y(v)); ctx.lineTo(w - a.m.r, a.Y(v)); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = c; ctx.textAlign = "left"; ctx.textBaseline = "bottom"; ctx.fillText(label, a.m.l + 4, a.Y(v) - 2); };
-      hline(1, css("--muted"), "norma", [2, 3]);
+      const hline = (v, c, label, dash, below) => { ctx.strokeStyle = c; ctx.setLineDash(dash); ctx.beginPath(); ctx.moveTo(a.m.l, a.Y(v)); ctx.lineTo(w - a.m.r, a.Y(v)); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = c; ctx.textAlign = "left"; ctx.textBaseline = below ? "top" : "bottom"; ctx.fillText(label, a.m.l + 4, a.Y(v) + (below ? 2 : -2)); };
+      hline(1, css("--muted"), "norma", [2, 3], true);
       hline(o.threshold, css("--ink"), "soglia: s = 0", [6, 4]);
       hline(satTop, css("--accent"), "s = 1", [6, 4]);
       if (ph != null) { ctx.strokeStyle = css("--accent"); ctx.lineWidth = 2; const x = a.m.l + ph * (w - a.m.l - a.m.r); ctx.beginPath(); ctx.moveTo(x, a.m.t); ctx.lineTo(x, h - a.m.b); ctx.stroke(); }
