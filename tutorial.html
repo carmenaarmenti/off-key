@@ -132,6 +132,8 @@ details.opts summary::-webkit-details-marker { display: none; }
 details.opts summary::after { content: " ▾"; }
 details.opts[open] summary::after { content: " ▴"; }
 details.opts .knobs { padding-top: 12px; }
+.opt-note { grid-column: 1 / -1; font-size: 0.82rem; color: var(--muted); margin: -8px 0 4px; max-width: 70ch; }
+.opt-note b { color: var(--ink); font-weight: 500; }
 .field { display: grid; gap: 6px; }
 .field > span { font-size: 0.85rem; color: var(--muted); }
 .divider { height: 1px; background: var(--line); }
@@ -426,8 +428,8 @@ function toggle(parent, label, value, onChange) {
   b.addEventListener("click", () => { const v = b.getAttribute("aria-pressed") !== "true"; b.setAttribute("aria-pressed", String(v)); onChange(v); });
   parent.append(b); return b;
 }
-function options(parent, build) {
-  const d = el("details", { class: "opts" }, [el("summary", { text: "More settings" })]);
+function options(parent, build, summary = "More settings") {
+  const d = el("details", { class: "opts" }, [el("summary", { text: summary })]);
   const k = el("div", { class: "knobs" }); d.append(k); build(k); parent.append(d);
 }
 function stats(parent) {
@@ -770,8 +772,10 @@ function effectSlide(def) {
       const job = (s, d = 2.5) => ({ dur: d, partials: DEF.partials, fx: fx(), voices: [voice({ f0: st.f0, ghost: st.ghost, s })] });
       options(t, b => {
         knob(b, { label: "Ghost voice", min: 0, max: 1, step: 0.05, value: st.ghost, fmt: v => v ? Math.round(v * 100) + "%" : "off", onInput: v => { st.ghost = v; redraw(); } });
+        b.append(el("p", { class: "opt-note", html: "<b>Ghost voice</b>: a second copy of the same note that plays alongside it with <b>no effects</b> and a fixed pitch. It is the reference that makes a change audible: a note that has moved, or whose partials have shifted, is heard against the ghost, which stays where the note started. With detune and jitter the two beat against each other. The slider sets its volume relative to the note (35% by default); turn it off to hear the transformed note alone and notice how much harder the change is to hear. In the full piece every series has its own ghost voice; the Chord step comes back to it." }));
         chips(b, { title: "Fundamental f₀", label: "Fundamental", options: NOTES, value: st.f0, onChange: v => { st.f0 = v; redraw(); } });
-      });
+        b.append(el("p", { class: "opt-note", html: "<b>Fundamental f₀</b>: the pitch of the note used in this experiment. Effects measured in cents sound the same at any pitch; those measured in hertz, such as beats, scale with it." }));
+      }, "More settings: ghost voice and pitch");
       function redraw() { draw.redraw(); statsSet(def.stats(st, sv())); }
       redraw();
       listen(t, { label: "Ramp: s from 0 to 1", run: b => playJobs(b, [job({ type: "ramp", from: 0, to: 1 }, 6)], `${def.label} · ramp`, p => { st.live = p ? p.frac : null; sK.set(sv()); redraw(); }) }, [
