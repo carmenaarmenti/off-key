@@ -58,6 +58,12 @@ body {
 .progress button[aria-current="step"]::after { background: var(--accent); }
 .progress button:hover::after { background: var(--muted); }
 .progress .rest { height: 4px; margin-top: 7px; border-radius: 2px; background: var(--line); opacity: 0.5; }
+textarea.csv { width: 100%; min-height: 220px; font: 0.85rem/1.5 var(--font-mono); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; resize: vertical; }
+textarea.csv:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.feedback.bad { color: var(--icse); }
+.scale-note { font-size: 0.85rem; color: var(--muted); margin: -6px 0 0; max-width: 70ch; }
+.data-note { font-size: 0.85rem; color: var(--muted); margin: 0; }
 
 /* slide */
 .slide { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 56px; align-items: start; padding-block: 28px 32px; outline: none; }
@@ -284,7 +290,7 @@ function render(job) {
   if (job.beat && job.beat.vol > 0) {
     const bt = job.beat, len = Math.round(0.3 * sr), NY = Math.round(job.dur / bt.spy);
     for (let y = 0; y < NY; y++) {
-      const accent = bt.accent && (2006 + y) % 5 === 0, st = Math.round(y * bt.spy * sr), a = bt.vol * (accent ? 0.9 : 0.5);
+      const accent = bt.accent && ((bt.startYear || 2006) + y) % 5 === 0, st = Math.round(y * bt.spy * sr), a = bt.vol * (accent ? 0.9 : 0.5);
       for (let j = 0; j < len && st + j < n; j++) {
         const t = j / sr;
         let v = 0.7 * Math.sin(TWO_PI * 1250 * t) * Math.exp(-t / 0.010) + 0.35 * Math.sin(TWO_PI * 2780 * t) * Math.exp(-t / 0.006);
@@ -306,22 +312,75 @@ return { render };
 <script>
 (function () {
 "use strict";
-// ---------------- data and defaults (same as lab.html) ----------------
-const YEARS = []; for (let y = 2006; y <= 2025; y++) YEARS.push(y);
-const DATA = {
-  ICSE: [395,334,371,405,380,441,408,461,496,452,530,415,502,529,617,615,691,780,1049,1150],
-  FSE:  [125,251,152,217,169,203,201,251,273,291,266,295,295,303,360,407,449,465,474,515],
-  ASE:  [121,312,280,220,190,252,138,254,276,289,284,367,386,448,395,440,531,633,587,1181]
+// ---------------- data and defaults ----------------
+// Built-in data: submissions to ICSE, FSE and ASE, 2006–2025 (same as lab.html).
+// Viewers can replace them in the first step; the tutorial then reads YEARS, NAMES and DATA.
+const DEFAULT_DATA = {
+  years: Array.from({ length: 20 }, (_, i) => 2006 + i),
+  names: ["ICSE", "FSE", "ASE"],
+  series: {
+    ICSE: [395,334,371,405,380,441,408,461,496,452,530,415,502,529,617,615,691,780,1049,1150],
+    FSE:  [125,251,152,217,169,203,201,251,273,291,266,295,295,303,360,407,449,465,474,515],
+    ASE:  [121,312,280,220,190,252,138,254,276,289,284,367,386,448,395,440,531,633,587,1181]
+  }
 };
-const NAMES = ["ICSE", "FSE", "ASE"];
-const CHORD = { ICSE: { f0: 110, pan: -0.7, dir: -1 }, FSE: { f0: 165, pan: 0, dir: 1 }, ASE: { f0: 220, pan: 0.7, dir: 1 } };
+let YEARS, NAMES, DATA, NY;
+function setData(d) {
+  YEARS = d.years.slice(); NAMES = d.names.slice(); NY = YEARS.length;
+  DATA = {}; for (const n of NAMES) DATA[n] = d.series[n].slice();
+}
+const currentData = () => ({ years: YEARS, names: NAMES, series: DATA });
+const isDefaultData = () => JSON.stringify(currentData()) === JSON.stringify(DEFAULT_DATA);
+// CSV with a header "year,<name>,<name>,<name>" and one row per year
+function toCSV(d) { return ["year," + d.names.join(","), ...d.years.map((y, i) => [y, ...d.names.map(n => d.series[n][i])].join(","))].join("\n"); }
+function parseCSV(text) {
+  const rows = String(text).split(/\r?\n/).map(r => r.trim()).filter(r => r && !r.startsWith("#"));
+  if (rows.length < 2) return { error: "Add a header row and at least 6 rows of data." };
+  const sep = rows[0].includes("\t") ? "\t" : rows[0].includes(";") ? ";" : ",";
+  const cells = r => r.split(sep).map(c => c.trim());
+  const num = c => Number(sep === "," ? c : c.replace(",", "."));
+  const head = cells(rows[0]);
+  if (head.length !== 4) return { error: `The header needs 4 columns, the word year and three series names. It has ${head.length}.` };
+  const names = head.slice(1);
+  if (names.some(n => !n)) return { error: "Every series needs a name in the header." };
+  if (names.some(n => n.length > 16)) return { error: "Keep series names to 16 characters or fewer." };
+  if (new Set(names.map(n => n.toLowerCase())).size !== 3) return { error: "The three series need different names." };
+  const years = [], series = {}; names.forEach(n => series[n] = []);
+  for (let i = 1; i < rows.length; i++) {
+    const c = cells(rows[i]), row = i + 1;
+    if (c.length !== 4) return { error: `Row ${row} has ${c.length} values. Each row needs 4: a year and three numbers.` };
+    const y = Number(c[0]);
+    if (!Number.isInteger(y)) return { error: `Row ${row}: "${c[0]}" is not a year.` };
+    if (years.length && y !== years[years.length - 1] + 1) return { error: `Row ${row}: years must be consecutive and increasing; expected ${years[years.length - 1] + 1}.` };
+    years.push(y);
+    for (let j = 0; j < 3; j++) {
+      const v = num(c[j + 1]);
+      if (!Number.isFinite(v) || v <= 0) return { error: `Row ${row}: "${c[j + 1]}" in ${names[j]} must be a positive number.` };
+      series[names[j]].push(v);
+    }
+  }
+  if (years.length < 6) return { error: `Add at least 6 years of data; there are ${years.length}.` };
+  if (years.length > 60) return { error: `Use at most 60 years of data; there are ${years.length}.` };
+  return { data: { years, names, series } };
+}
+setData(DEFAULT_DATA);
+try { const saved = JSON.parse(localStorage.getItem("anatomia-data") || "null"); if (saved && !parseCSV(toCSV(saved)).error) setData(saved); } catch (e) {}
+// the three voices of the chord, in the order of the data columns
+const VOICES = [{ f0: 110, pan: -0.7, dir: -1, color: "--icse" }, { f0: 165, pan: 0, dir: 1, color: "--fse" }, { f0: 220, pan: 0.7, dir: 1, color: "--ase" }];
+const chordOf = n => VOICES[NAMES.indexOf(n)];
+const colorOf = n => css(chordOf(n).color);
+const lastYear = () => YEARS[NY - 1];
+// default baseline period: the first ten years (2006–2015 for the built-in data), leaving at least one year after it
+const baseDefault = () => Math.min(YEARS[0] + 9, lastYear() - 1);
+const span = end => end === YEARS[0] ? String(end) : `${YEARS[0]}–${end}`;
+const listNames = () => `${NAMES[0]}, ${NAMES[1]} and ${NAMES[2]}`;
 const DEF = { sr: 44100, partials: 28, f0: 220, ghost: 0.35, threshold: 1.25, saturate: 1.4, gamma: 1.3, spy: 1, beat: 0.5, accent: true, breath: false,
   fx: { detune: 90, jitter: 20, inharm: 2.5, bright: 1.2, fold: 5 } };
 const NOFX = { detune: 0, jitter: 0, inharm: 0, bright: 0, fold: 0 };
 const NOTES = [[110, "A2"], [146.83, "D3"], [220, "A3"], [293.66, "D4"]];
 const median = a => { const s = a.slice().sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
-// baseline: median over 2006..end (2015 by default)
-const normOf = (name, end = 2015) => median(DATA[name].slice(0, end - YEARS[0] + 1));
+// baseline: median over the first year .. end
+const normOf = (name, end = baseDefault()) => median(DATA[name].slice(0, end - YEARS[0] + 1));
 function sLinear(name, o) {
   const norm = normOf(name, o.baseEnd), v = DATA[name];
   const sat = o.satMode === "own" ? Math.max(0.05, Math.max(...v) / norm - o.threshold) : o.saturate;
@@ -505,8 +564,8 @@ function drawWave(ctx, w, h, o) {
 }
 function fullPieceJob(over = {}) {
   const o = Object.assign({}, DEF, over), fx = Object.assign({}, DEF.fx, over.fx || {});
-  return { dur: 20 * o.spy, partials: o.partials, fx, breath: o.breath, beat: { vol: o.beat, accent: o.accent, spy: o.spy },
-    voices: NAMES.map(n => voice({ f0: CHORD[n].f0, dir: CHORD[n].dir, pan: CHORD[n].pan, ghost: over.ghost ?? DEF.ghost,
+  return { dur: NY * o.spy, partials: o.partials, fx, breath: o.breath, beat: { vol: o.beat, accent: o.accent, spy: o.spy, startYear: YEARS[0] },
+    voices: NAMES.map(n => voice({ f0: chordOf(n).f0, dir: chordOf(n).dir, pan: chordOf(n).pan, ghost: over.ghost ?? DEF.ghost,
       s: { type: "curve", values: sLinear(n, COMMON), spy: o.spy, gamma: o.gamma } })) };
 }
 function jitterNoise(ms, seed = 3) {
@@ -529,6 +588,66 @@ function sContinuous(vals, gamma, P = 50) {
 const SLIDES = [];
 const addSlide = d => SLIDES.push(d);
 
+let inputMsg = null; // message shown after the data change, on the next render
+addSlide({
+  id: "input", label: "Your data", eyebrow: "Before you start",
+  title: "Start from the data",
+  lead: () => isDefaultData()
+    ? "The tutorial uses submissions to ICSE, FSE and ASE from 2006 to 2025. Keep them, or paste three series of your own."
+    : `The tutorial is using your data: ${listNames()}, from ${YEARS[0]} to ${lastYear()}.`,
+  formula: ["year,ICSE,FSE,ASE", "2006,395,125,121", "2007,334,251,312", "…"],
+  hear: null,
+  more: `<p><b>Format</b>: plain text in CSV form, one row per year, like the example above.</p>
+    <ul>
+      <li>The first row is the header: the word <code>year</code>, then the names of exactly three series (up to 16 characters each). Each series becomes one note of the chord, in column order: the first on A2 (110 Hz, left), the second on E3 (165 Hz, centre), the third on A3 (220 Hz, right).</li>
+      <li>Every other row holds a year and three positive numbers, such as submission counts.</li>
+      <li>Years are whole numbers, consecutive and increasing, with no gaps: at least 6 and at most 60.</li>
+      <li>Columns can be separated by commas, semicolons or tabs, so you can paste straight from a spreadsheet. With semicolons or tabs a decimal comma is accepted.</li>
+      <li>Blank lines and lines starting with # are ignored.</li>
+    </ul>
+    <p>The baseline period starts at the first year and by default covers the first ten. Your data stay in this browser. The full tool at the end of the tutorial uses the built-in data.</p>`,
+  build(t) {
+    const pv = plot(t, 170, (ctx, w, h) => {
+      const top = Math.max(...NAMES.flatMap(n => DATA[n])), mag = Math.pow(10, Math.floor(Math.log10(top))), ymax = Math.ceil(top / mag) * mag;
+      const a = axes(ctx, w, h, { x0: 0, x1: NY - 1, y0: 0, y1: ymax, yTicks: [0, ymax / 2, ymax], yFmt: v => v.toLocaleString("en-US"), xTicks: [0, Math.floor((NY - 1) / 2), NY - 1], xFmt: i => String(YEARS[i]), m: { l: 48 } });
+      NAMES.forEach(n => line(ctx, DATA[n].map((v, i) => [a.X(i), a.Y(v)]), colorOf(n), 2));
+      ctx.font = `11px ${css("--font-mono")}`; ctx.textAlign = "left"; ctx.textBaseline = "top";
+      NAMES.forEach((n, j) => { ctx.fillStyle = colorOf(n); ctx.fillText(n, a.m.l + 6 + j * 90, a.m.t); });
+    });
+    pv.redraw();
+    const ta = el("textarea", { class: "csv", id: "csvInput", rows: "12", spellcheck: "false", "aria-label": "Data in CSV format" });
+    ta.value = toCSV(currentData());
+    const msg = el("p", { class: "feedback", "aria-live": "polite" });
+    if (inputMsg) { msg.textContent = inputMsg; inputMsg = null; }
+    const file = el("input", { type: "file", accept: ".csv,.tsv,.txt,text/csv,text/plain", hidden: "" });
+    file.addEventListener("change", () => {
+      const f = file.files && file.files[0]; if (!f) return;
+      const rd = new FileReader();
+      rd.onload = () => { ta.value = String(rd.result); msg.classList.remove("bad"); msg.textContent = `Loaded ${f.name}. Check it, then press Use these data.`; };
+      rd.onerror = () => { msg.classList.add("bad"); msg.textContent = "The file could not be read. Paste its contents instead."; };
+      rd.readAsText(f); file.value = "";
+    });
+    const apply = () => {
+      const r = parseCSV(ta.value);
+      if (r.error) { msg.classList.add("bad"); msg.textContent = r.error; return; }
+      setData(r.data);
+      try { localStorage.setItem("anatomia-data", JSON.stringify(r.data)); } catch (e) {}
+      inputMsg = `Now using ${listNames()}, ${YEARS[0]}–${lastYear()} (${NY} years).`; go(cur);
+    };
+    const restore = () => {
+      setData(DEFAULT_DATA);
+      try { localStorage.removeItem("anatomia-data"); } catch (e) {}
+      inputMsg = "Restored the built-in data: ICSE, FSE and ASE, 2006–2025."; go(cur);
+    };
+    t.append(ta, el("div", { class: "actions" }, [
+      el("button", { type: "button", class: "btn primary", text: "Use these data", onclick: apply }),
+      el("button", { type: "button", class: "btn", text: "Load a CSV file", onclick: () => file.click() }),
+      el("button", { type: "button", class: "btn", text: "Restore the built-in data", onclick: restore }),
+      file
+    ]), msg);
+  }
+});
+
 addSlide({
   id: "start", label: "Introduction", eyebrow: "Introduction",
   title: "A number that warps a sound",
@@ -538,38 +657,39 @@ addSlide({
   more: `<p>The following steps build the chain one link at a time, in the order the program computes it. On each effect step, the panel on the right is an experiment with <b>only that effect active</b> on one note: move s, play the ramp from 0 to 1, and compare the clean note with the transformed one. The button on this slide plays the finished result, with every effect on.</p>
     <p>When a step is clear, press "Got it" to open the next one. You can go back to any step you have already seen, from the bar at the top or with the ← and → keys.</p>`,
   build(t) {
-    const steps = [["Data", () => "20 values per series", false], ["Strangeness s(t)", () => "one number between 0 and 1", false],
+    const steps = [["Data", () => `${NY} values per series`, false], ["Strangeness s(t)", () => "one number between 0 and 1", false],
       ["A chain of effects", () => "each one scaled by s", true], ["Sound", () => "a chord, one note per series", false]];
     t.append(el("ol", { class: "chain" }, steps.map(([a, b, fx]) => el("li", { class: fx ? "fx" : "" }, [el("div", {}, [el("b", { text: a }), el("br"), el("small", { text: b() })]), fx ? el("em", { text: "× s" }) : el("span")]))));
     t.append(el("p", { class: "chain-note", text: "The next steps open the chain one link at a time. The button below plays the finished result, with every effect on." }));
-    listen(t, { label: "Hear the final result", run: b => playJobs(b, [fullPieceJob()], "full piece · 20 years") });
+    listen(t, { label: "Hear the final result", run: b => playJobs(b, [fullPieceJob()], `full piece · ${NY} years`) });
   }
 });
 
 addSlide({
   id: "data", label: "Data → s", eyebrow: "Step 1 · Strangeness",
   title: "From submissions to strangeness",
-  lead: "Each year is compared with its conference's own past. Below the threshold s is 0; at saturation it is 1.",
+  lead: "Each year is compared with its series' own past. Below the threshold s is 0; at saturation it is 1.",
   formula: ["baseline = median of the baseline period", "r = submissions / baseline", "s = clip((r − threshold) / saturation) ^ γ"],
-  hear: "The preview plays the chosen conference with every effect on: this is where we are heading.",
-  more: `<p><b>Baseline</b>: the median of the conference's submissions over the <b>baseline period</b>, the years treated as the normal past. By default it is 2006–2015 (ICSE 406.5 · FSE 210 · ASE 253). Ending the period later folds part of the recent growth into the reference, so less of it sounds strange; ending it earlier makes the growth stand out more. The median is not pulled by isolated spikes.</p>
-    <p><b>Threshold</b>: below it, variation counts as normal and s = 0. <b>Saturation</b>: the distance above the threshold at which s = 1. On the shared scale it is the same for every conference; on the per-conference scale s = 1 in the conference's peak year.</p>
+  hear: "The preview plays the chosen series with every effect on: this is where we are heading.",
+  more: () => `<p><b>Baseline</b>: the median of the series over the <b>baseline period</b>, the years treated as the normal past. By default it covers the first ten years (${span(baseDefault())}${isDefaultData() ? "; ICSE 406.5 · FSE 210 · ASE 253" : ""}). Ending the period later folds part of the recent growth into the reference, so less of it sounds strange; ending it earlier makes the growth stand out more. The median is not pulled by isolated spikes.</p>
+    <p><b>Threshold</b>: below it, variation counts as normal and s = 0. <b>Saturation</b>: the distance above the threshold at which s = 1.</p>
+    <p><b>Saturation scale</b>. <i>Shared</i>: one saturation for every series, so s = 1 always means the same multiple of the baseline (threshold + saturation). The series can be compared directly, and one that grows less reaches a lower s. <i>Per conference</i>: each series gets its own saturation, chosen so that s = 1 in its peak year (saturation = peak / baseline − threshold). Every series then spans the full range from 0 to 1, which makes each one as expressive as possible on its own, but equal values of s no longer mean equal growth. The chord always uses the shared scale; the per-conference scale is for listening to one series at a time.</p>
     <p><b>γ</b>: with γ &gt; 1 small values shrink more than large ones (0.3<sup>1.3</sup> = 0.21; 0.8<sup>1.3</sup> = 0.75), so the past stays quiet.</p>
     <p>To get a continuous signal, s is interpolated between year centres and smoothed (see "Time").</p>`,
   build(t) {
-    const o = { name: "ICSE", threshold: DEF.threshold, saturate: DEF.saturate, satMode: "common", gamma: DEF.gamma, baseEnd: 2015 };
+    const o = { name: NAMES[0], threshold: DEF.threshold, saturate: DEF.saturate, satMode: "common", gamma: DEF.gamma, baseEnd: baseDefault() };
     let ph = null;
-    chips(t, { label: "Conference", options: NAMES.map(n => [n, n]), value: o.name, onChange: v => { o.name = v; redraw(); } });
+    chips(t, { label: "Series", options: NAMES.map(n => [n, n]), value: o.name, onChange: v => { o.name = v; redraw(); } });
     const ch = plot(t, 260, (ctx, w, h) => {
       const norm = normOf(o.name, o.baseEnd), r = DATA[o.name].map(x => x / norm), sl = sLinear(o.name, o);
       const satTop = o.satMode === "own" ? Math.max(...r) : o.threshold + o.saturate, ymax = Math.ceil(Math.max(3, ...r, satTop) + 0.3);
-      const a = axes(ctx, w, h, { x0: -0.5, x1: 19.5, y0: 0, y1: ymax, yTicks: [0, 1, Math.round(ymax / 2), ymax].filter((v, i, s) => s.indexOf(v) === i), yFmt: v => v + "×", xTicks: [0, 9, 19], xFmt: i => String(YEARS[i]), m: { b: 40 } });
-      const bw = (a.X(1) - a.X(0)) * 0.62, col = css(`--${o.name.toLowerCase()}`);
+      const a = axes(ctx, w, h, { x0: -0.5, x1: NY - 0.5, y0: 0, y1: ymax, yTicks: [0, 1, Math.round(ymax / 2), ymax].filter((v, i, s) => s.indexOf(v) === i), yFmt: v => v + "×", xTicks: [0, Math.floor((NY - 1) / 2), NY - 1], xFmt: i => String(YEARS[i]), m: { b: 40 } });
+      const bw = (a.X(1) - a.X(0)) * 0.62, col = colorOf(o.name);
       // baseline period: shaded years behind the bars
       const xb = a.X(o.baseEnd - YEARS[0] + 0.5);
       ctx.fillStyle = css("--bg"); ctx.fillRect(a.m.l, a.m.t, xb - a.m.l, a.Y(0) - a.m.t);
       ctx.fillStyle = css("--muted"); ctx.font = `11px ${css("--font-mono")}`; ctx.textAlign = "left"; ctx.textBaseline = "top";
-      ctx.fillText(o.baseEnd === YEARS[0] ? "baseline 2006" : `baseline 2006–${o.baseEnd}`, a.m.l + 4, a.m.t + 2);
+      ctx.fillText(`baseline ${span(o.baseEnd)}`, a.m.l + 4, a.m.t + 2);
       r.forEach((v, i) => { ctx.globalAlpha = sl[i] > 0 ? 1 : 0.28; ctx.fillStyle = col; ctx.beginPath(); ctx.roundRect(a.X(i) - bw / 2, a.Y(v), bw, a.Y(0) - a.Y(v), [3, 3, 0, 0]); ctx.fill(); });
       ctx.globalAlpha = 1;
       const hl = (v, label) => { line(ctx, [[a.m.l, a.Y(v)], [w - a.m.r, a.Y(v)]], css("--ink"), 1, [4, 4]); ctx.fillStyle = css("--ink"); ctx.textAlign = "left"; ctx.textBaseline = "bottom"; ctx.font = `11px ${css("--font-mono")}`; ctx.fillText(label, a.m.l + 4, a.Y(v) - 3); };
@@ -578,23 +698,33 @@ addSlide({
       const yS = h - 16;
       sl.forEach((v, i) => { const s = Math.pow(v, o.gamma); ctx.fillStyle = css("--accent"); ctx.globalAlpha = 0.08 + 0.92 * s; ctx.beginPath(); ctx.roundRect(a.X(i) - bw / 2, yS, bw, 10, 2); ctx.fill(); });
       ctx.globalAlpha = 1; ctx.fillStyle = css("--muted"); ctx.textAlign = "right"; ctx.textBaseline = "middle"; ctx.fillText("s", a.m.l - 8, yS + 5);
-      if (ph != null) { const x = a.X(ph * 20 - 0.5); line(ctx, [[x, a.m.t], [x, h - 4]], css("--accent"), 2); }
+      if (ph != null) { const x = a.X(ph * NY - 0.5); line(ctx, [[x, a.m.t], [x, h - 4]], css("--accent"), 2); }
     });
     const st = stats(t);
     const k = el("div", { class: "knobs" }); t.append(k);
-    knob(k, { label: "Baseline period", min: 2006, max: 2024, step: 1, value: o.baseEnd, fmt: v => v === 2006 ? "2006 only" : `2006–${v}`, onInput: v => { o.baseEnd = v; redraw(); } });
+    knob(k, { label: "Baseline period", min: YEARS[0], max: lastYear() - 1, step: 1, value: o.baseEnd, fmt: v => span(v), onInput: v => { o.baseEnd = v; redraw(); } });
     knob(k, { label: "Threshold", min: 1, max: 2, step: 0.05, value: o.threshold, fmt: v => fmtN(v) + "×", onInput: v => { o.threshold = v; redraw(); } });
     const sat = knob(k, { label: "Saturation", min: 0.3, max: 3, step: 0.05, value: o.saturate, fmt: v => "+" + fmtN(v), onInput: v => { o.saturate = v; redraw(); } });
     knob(k, { label: "Exponent γ", min: 0.5, max: 3, step: 0.05, value: o.gamma, fmt: v => fmtN(v), onInput: v => { o.gamma = v; redraw(); } });
-    options(t, b => chips(b, { title: "Saturation scale", label: "Scale", options: [["common", "Shared"], ["own", "Per conference"]], value: o.satMode, onChange: v => { o.satMode = v; redraw(); } }));
+    chips(t, { title: "Saturation scale", label: "Saturation scale", options: [["common", "Shared"], ["own", "Per conference"]], value: o.satMode, onChange: v => { o.satMode = v; redraw(); } });
+    const note = el("p", { class: "scale-note", "aria-live": "polite" }); t.append(note);
+    const scaleText = () => {
+      if (o.satMode === "common") {
+        const peaks = NAMES.map(n => `${n} ${fmtN(Math.pow(Math.max(...sLinear(n, o)), o.gamma))}`).join(" · ");
+        return `Shared: every series reaches s = 1 at the same level, ${fmtN(o.threshold + o.saturate)}× its own baseline, so their strangeness can be compared and a series that grows less never reaches the maximum. Highest s with these settings: ${peaks}. The chord always uses this scale.`;
+      }
+      const peaks = NAMES.map(n => { const v = DATA[n], i = v.indexOf(Math.max(...v)); return `${n} ${YEARS[i]} (${fmtN(v[i] / normOf(n, o.baseEnd))}×)`; }).join(" · ");
+      return `Per conference: each series reaches s = 1 in its own peak year, so each one uses the full range from 0 to 1, but equal values of s no longer mean equal growth. The Saturation slider is not used. Peak years: ${peaks}. Only a single series can be heard on this scale.`;
+    };
     function redraw() {
       sat.input.disabled = o.satMode === "own"; ch.redraw();
       const sl = sLinear(o.name, o), norm = normOf(o.name, o.baseEnd);
-      st([[fmtN(norm, 1), o.baseEnd === 2006 ? "2006 baseline" : `2006–${o.baseEnd} baseline`], [String(Math.round(norm * o.threshold)), "submissions for s > 0"], [fmtN(Math.pow(sl[19], o.gamma)), "s in 2025"]]);
+      st([[fmtN(norm, 1), `${span(o.baseEnd)} baseline`], [String(Math.round(norm * o.threshold)), "value for s > 0"], [fmtN(Math.pow(sl[NY - 1], o.gamma)), `s in ${lastYear()}`]]);
+      note.textContent = scaleText();
     }
     redraw();
-    listen(t, { label: "Preview: 20 years", run: b => playJobs(b, [{ dur: 20, partials: DEF.partials, fx: DEF.fx, beat: { vol: DEF.beat, accent: true, spy: 1 },
-      voices: [voice({ ghost: DEF.ghost, s: { type: "curve", values: sLinear(o.name, o), spy: 1, gamma: o.gamma } })] }], `${o.name} · 20 years`, p => { ph = p ? p.t / 20 : null; ch.redraw(); }) });
+    listen(t, { label: `Preview: ${NY} years`, run: b => playJobs(b, [{ dur: NY, partials: DEF.partials, fx: DEF.fx, beat: { vol: DEF.beat, accent: true, spy: 1, startYear: YEARS[0] },
+      voices: [voice({ ghost: DEF.ghost, s: { type: "curve", values: sLinear(o.name, o), spy: 1, gamma: o.gamma } })] }], `${o.name} · ${NY} years`, p => { ph = p ? p.t / NY : null; ch.redraw(); }) });
   }
 });
 
@@ -748,32 +878,32 @@ effectSlide({
 addSlide({
   id: "chord", label: "Chord", eyebrow: "Step 8 · Reference and mix",
   title: "Three conferences, one chord",
-  lead: "ICSE, FSE and ASE play together, each with its own s and its own ghost voice. At the start the chord is perfectly consonant.",
-  formula: ["ICSE 110 Hz · FSE 165 Hz · ASE 220 Hz", "just fifth 3 : 2 · octave 2 : 1"],
-  hear: "In 2006 the chord is still. In recent years the notes warp by different amounts and also beat against each other.",
+  lead: () => `${listNames()} play together, each with its own s and its own ghost voice. At the start the chord is perfectly consonant.`,
+  formula: () => [NAMES.map((n, i) => `${n} ${VOICES[i].f0} Hz`).join(" · "), "just fifth 3 : 2 · octave 2 : 1"],
+  hear: "In the first year the chord is still. In recent years the notes warp by different amounts and also beat against each other.",
   more: `<p>The <b>ghost voice</b> is the starting note with no effects, constant throughout, at a relative level of 0.35. It is added after wavefolding, so it is not distorted and does not intermodulate with the note: it makes audible how far the note has moved.</p>
-    <p>The starting intervals are whole-number ratios, so many partials coincide and there is no beating. ICSE goes down, FSE and ASE go up: partials that coincided pull apart. The chord always uses the shared scale. Constant-power panning: left √((1 − p) / 2), right √((1 + p) / 2), with p = −0.7, 0, +0.7.</p>`,
+    <p>The starting intervals are whole-number ratios, so many partials coincide and there is no beating. The first series goes down, the other two go up: partials that coincided pull apart. The chord always uses the shared scale. Constant-power panning: left √((1 − p) / 2), right √((1 + p) / 2), with p = −0.7, 0, +0.7.</p>`,
   build(t) {
-    const st = { i: 17, ghost: DEF.ghost };
+    const st = { i: Math.max(0, NY - 3), ghost: DEF.ghost };
     const bars = plot(t, 150, (ctx, w, h) => {
       const a = axes(ctx, w, h, { x0: 0, x1: 1, y0: -0.6, y1: 2.6, xTicks: [0, 0.5, 1], xFmt: v => "s " + fmtN(v, 1), m: { l: 52 } });
       NAMES.forEach((n, j) => {
         const s = sYear(n, st.i), y = a.Y(2 - j);
         ctx.fillStyle = css("--line"); ctx.beginPath(); ctx.roundRect(a.X(0), y - 10, a.X(1) - a.X(0), 20, 10); ctx.fill();
-        ctx.fillStyle = css(`--${n.toLowerCase()}`); ctx.beginPath(); ctx.roundRect(a.X(0), y - 10, Math.max(20, a.X(s) - a.X(0)), 20, 10); ctx.fill();
+        ctx.fillStyle = colorOf(n); ctx.beginPath(); ctx.roundRect(a.X(0), y - 10, Math.max(20, a.X(s) - a.X(0)), 20, 10); ctx.fill();
         ctx.font = `500 12px ${css("--font-text")}`; ctx.fillStyle = css("--ink"); ctx.textAlign = "right"; ctx.textBaseline = "middle"; ctx.fillText(n, a.m.l - 10, y);
         ctx.font = `11px ${css("--font-mono")}`; ctx.fillStyle = css("--muted"); ctx.textAlign = "left"; ctx.fillText(fmtN(s), Math.min(w - 36, Math.max(a.X(0) + 24, a.X(s) + 8)), y);
       });
     });
     const k = el("div", { class: "knobs" }); t.append(k);
-    knob(k, { label: "Year", main: true, min: 0, max: 19, step: 1, value: st.i, fmt: i => String(YEARS[i]), onInput: v => { st.i = v; bars.redraw(); } });
+    knob(k, { label: "Year", main: true, min: 0, max: NY - 1, step: 1, value: st.i, fmt: i => String(YEARS[i]), onInput: v => { st.i = v; bars.redraw(); } });
     knob(k, { label: "Ghost voices", min: 0, max: 1, step: 0.05, value: st.ghost, fmt: v => v ? Math.round(v * 100) + "%" : "off", onInput: v => { st.ghost = v; } });
     bars.redraw();
-    const job = (i, ghost) => ({ dur: 3, partials: DEF.partials, fx: DEF.fx, voices: NAMES.map(n => voice({ f0: CHORD[n].f0, dir: CHORD[n].dir, pan: CHORD[n].pan, ghost, s: C(sYear(n, i)) })) });
+    const job = (i, ghost) => ({ dur: 3, partials: DEF.partials, fx: DEF.fx, voices: NAMES.map(n => voice({ f0: chordOf(n).f0, dir: chordOf(n).dir, pan: chordOf(n).pan, ghost, s: C(sYear(n, i)) })) });
     listen(t, { label: "Hear this year", run: b => playJobs(b, [job(st.i, st.ghost)], `chord ${YEARS[st.i]}`) }, [
-      { label: "2006 → year", run: b => playJobs(b, [job(0, st.ghost), job(st.i, st.ghost)], `A 2006 · B ${YEARS[st.i]}`) },
+      { label: `${YEARS[0]} → year`, run: b => playJobs(b, [job(0, st.ghost), job(st.i, st.ghost)], `A ${YEARS[0]} · B ${YEARS[st.i]}`) },
       { label: "No ghosts", run: b => playJobs(b, [job(st.i, 0)], `${YEARS[st.i]} without ghosts`) },
-      { label: "Ghosts only", run: b => playJobs(b, [{ dur: 3, partials: DEF.partials, fx: NOFX, voices: NAMES.map(n => voice({ f0: CHORD[n].f0, pan: CHORD[n].pan, ghost: 1, note: false })) }], "ghost chord") }
+      { label: "Ghosts only", run: b => playJobs(b, [{ dur: 3, partials: DEF.partials, fx: NOFX, voices: NAMES.map(n => voice({ f0: chordOf(n).f0, pan: chordOf(n).pan, ghost: 1, note: false })) }], "ghost chord") }
     ]);
   }
 });
@@ -782,7 +912,7 @@ addSlide({
   id: "time", label: "Time", eyebrow: "Step 9 · Time",
   title: "Time: one year per second",
   lead: "The yearly value of s is interpolated and smoothed, and a beat marks the start of every year.",
-  formula: ["length = 20 × length of a year", "Gaussian smoothing, σ = ¼ year"],
+  formula: () => [`length = ${NY} × length of a year`, "Gaussian smoothing, σ = ¼ year"],
   hear: "The beat is the grid. The effects grow continuously, with no jumps between years.",
   more: `<p>Each yearly value sits at the centre of its year, is linearly interpolated to the next, and is filtered with three moving averages; γ is applied afterwards. So a year's change starts to be heard in the second half of the year before.</p>
     <p><b>Beat</b>: two damped sine waves, 1250 Hz (10 ms) and 2780 Hz (6 ms), too short to have a pitch. In years divisible by 5 an accent is added at 62 Hz (90 ms). <b>Slow breathing</b> (off by default): amplitude modulation 0.6 + 0.4 · sin²(2π · 0.11 · t), carrying no information about the data.</p>`,
@@ -790,26 +920,26 @@ addSlide({
     const st = { spy: DEF.spy, beat: DEF.beat, accent: DEF.accent, breath: DEF.breath };
     let ph = null;
     const ch = plot(t, 250, (ctx, w, h) => {
-      const a = axes(ctx, w, h, { x0: 0, x1: 20, y0: -0.14, y1: 1, yTicks: [0, 1], yFmt: v => "s " + v, xTicks: [0.5, 9.5, 19.5], xFmt: x => String(YEARS[Math.floor(x)]), m: { l: 34 } });
-      for (let y = 0; y <= 20; y++) { const acc = st.accent && (2006 + y) % 5 === 0 && y < 20; line(ctx, [[a.X(y), a.Y(-0.14)], [a.X(y), a.Y(acc ? -0.02 : -0.08)]], css(acc ? "--ink" : "--faint"), acc ? 2 : 1); }
+      const a = axes(ctx, w, h, { x0: 0, x1: NY, y0: -0.14, y1: 1, yTicks: [0, 1], yFmt: v => "s " + v, xTicks: [0.5, Math.floor(NY / 2) + 0.5, NY - 0.5], xFmt: x => String(YEARS[Math.floor(x)]), m: { l: 34 } });
+      for (let y = 0; y <= NY; y++) { const acc = st.accent && (YEARS[0] + y) % 5 === 0 && y < NY; line(ctx, [[a.X(y), a.Y(-0.14)], [a.X(y), a.Y(acc ? -0.02 : -0.08)]], css(acc ? "--ink" : "--faint"), acc ? 2 : 1); }
       NAMES.forEach(n => {
-        const vals = sLinear(n, COMMON), col = css(`--${n.toLowerCase()}`), steps = [];
+        const vals = sLinear(n, COMMON), col = colorOf(n), steps = [];
         vals.forEach((v, i) => { const s = Math.pow(v, DEF.gamma); steps.push([a.X(i), a.Y(s)], [a.X(i + 1), a.Y(s)]); });
         ctx.globalAlpha = 0.3; line(ctx, steps, col, 1.2); ctx.globalAlpha = 1;
         line(ctx, sContinuous(vals, DEF.gamma).map((s, i) => [a.X(i / 50), a.Y(s)]), col, 2.4);
       });
-      if (ph != null) line(ctx, [[a.X(ph * 20), a.m.t], [a.X(ph * 20), h - a.m.b]], css("--accent"), 2);
+      if (ph != null) line(ctx, [[a.X(ph * NY), a.m.t], [a.X(ph * NY), h - a.m.b]], css("--accent"), 2);
       ctx.font = `11px ${css("--font-mono")}`; ctx.textAlign = "left"; ctx.textBaseline = "top";
-      NAMES.forEach((n, j) => { ctx.fillStyle = css(`--${n.toLowerCase()}`); ctx.fillText(n, a.m.l + 6 + j * 52, a.m.t); });
+      NAMES.forEach((n, j) => { ctx.fillStyle = colorOf(n); ctx.fillText(n, a.m.l + 6 + j * 52, a.m.t); });
     });
     const k = el("div", { class: "knobs" }); t.append(k);
     knob(k, { label: "Length of a year", min: 0.4, max: 2, step: 0.05, value: st.spy, fmt: v => fmtN(v) + " s", onInput: v => { st.spy = v; } });
     knob(k, { label: "Beat volume", min: 0, max: 1, step: 0.05, value: st.beat, fmt: v => v ? Math.round(v * 100) + "%" : "off", onInput: v => { st.beat = v; } });
     options(t, b => { const c = el("div", { class: "chips" }); b.append(c); toggle(c, "Accent every 5 years", st.accent, v => { st.accent = v; ch.redraw(); }); toggle(c, "Slow breathing", st.breath, v => { st.breath = v; }); });
     ch.redraw();
-    const prog = p => { ph = p ? p.t / (20 * st.spy) : null; ch.redraw(); };
+    const prog = p => { ph = p ? p.t / (NY * st.spy) : null; ch.redraw(); };
     listen(t, { label: "Hear the full piece", run: b => playJobs(b, [fullPieceJob({ spy: st.spy, beat: st.beat, accent: st.accent, breath: st.breath })], "full piece", prog) }, [
-      { label: "Beat only", run: b => playJobs(b, [{ dur: 20 * st.spy, partials: DEF.partials, fx: NOFX, voices: [], beat: { vol: Math.max(st.beat, 0.3), accent: st.accent, spy: st.spy } }], "beat", prog) }
+      { label: "Beat only", run: b => playJobs(b, [{ dur: NY * st.spy, partials: DEF.partials, fx: NOFX, voices: [], beat: { vol: Math.max(st.beat, 0.3), accent: st.accent, spy: st.spy, startYear: YEARS[0] } }], "beat", prog) }
     ]);
   }
 });
@@ -828,7 +958,7 @@ addSlide({
   lead: "Switch effects off one at a time in the full piece, then test yourself with the quiz.",
   formula: null,
   hear: "Pitch: detune and jitter. Coherence: inharmonicity. Timbre: spectral tilt. Grain: wavefolding.",
-  more: `<ul>${Object.keys(FX_NAMES).map(k => `<li><b>${FX_NAMES[k]}</b>: ${FX_CUES[k]}</li>`).join("")}</ul><p>When subtracting, focus on 2022–2025, where s is highest.</p>`,
+  more: `<ul>${Object.keys(FX_NAMES).map(k => `<li><b>${FX_NAMES[k]}</b>: ${FX_CUES[k]}</li>`).join("")}</ul><p>When subtracting, focus on the last few years, where s is highest.</p>`,
   build(t) {
     const on = { detune: true, jitter: true, inharm: true, bright: true, fold: true };
     t.append(el("p", { class: "sub", text: "Subtraction" }));
@@ -837,7 +967,7 @@ addSlide({
     listen(t, { label: "Play with these effects", run: b => {
       const fx = {}; Object.keys(FX_NAMES).forEach(k => fx[k] = on[k] ? DEF.fx[k] : 0);
       const off = Object.keys(FX_NAMES).filter(k => !on[k]).map(k => FX_NAMES[k]);
-      playJobs(b, [fullPieceJob({ fx })], off.length ? "without " + off.join(", ") : "full piece", p => { if (p) nowEl.textContent = `▶ ${YEARS[Math.min(19, Math.floor(p.t))]}` + (off.length ? " · without " + off.join(", ") : ""); });
+      playJobs(b, [fullPieceJob({ fx })], off.length ? "without " + off.join(", ") : "full piece", p => { if (p) nowEl.textContent = `▶ ${YEARS[Math.min(NY - 1, Math.floor(p.t))]}` + (off.length ? " · without " + off.join(", ") : ""); });
     } });
     t.append(el("div", { class: "divider" }));
     t.append(el("p", { class: "sub", text: "Quiz" }));
@@ -874,6 +1004,7 @@ addSlide({
       el("li", { text: "Time bar to move between years" }),
       el("li", { text: "Settings export to render WAV files with sonify.py" })
     ]));
+    if (!isDefaultData()) t.append(el("p", { class: "data-note", text: "The tool uses the built-in data (ICSE, FSE and ASE, 2006–2025), not the data you entered in the first step." }));
     t.append(el("a", { class: "cta", href: "lab.html", text: "Open Submissions in Sound →" }));
   }
 });
