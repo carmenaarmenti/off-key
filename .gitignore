@@ -1,0 +1,9 @@
+# audio e immagini generati dagli script
+*.wav
+spectrogram.png
+
+# pagine assemblate per la pubblicazione
+dist/
+
+.DS_Store
+__pycache__/
