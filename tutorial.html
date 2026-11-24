@@ -132,7 +132,7 @@ details.opts summary::-webkit-details-marker { display: none; }
 details.opts summary::after { content: " ▾"; }
 details.opts[open] summary::after { content: " ▴"; }
 details.opts .knobs { padding-top: 12px; }
-.knob-note { font-size: 0.85rem; color: var(--muted); margin: -6px 0 0; max-width: 72ch; }
+.knob-note { font-size: 0.85rem; color: var(--muted); margin: 10px 0 0; max-width: 72ch; }
 .knob-note b { color: var(--ink); font-weight: 500; }
 .opt-note { grid-column: 1 / -1; font-size: 0.82rem; color: var(--muted); margin: -8px 0 4px; max-width: 70ch; }
 .opt-note b { color: var(--ink); font-weight: 500; }
@@ -781,7 +781,9 @@ function effectSlide(def) {
       const k = el("div", { class: "knobs" }); t.append(k);
       const sK = knob(k, { label: "Strangeness s", main: true, min: 0, max: 1, step: 0.01, value: st.s, fmt: v => fmtN(v), onInput: v => { st.s = v; st.live = null; redraw(); } });
       knob(k, Object.assign({}, def.depth, { onInput: v => { st.depth = v; redraw(); } }));
-      const kn = el("p", { class: "knob-note", "aria-live": "polite" }); t.append(kn);
+      // explanation of s and depth, closed by default like More settings; its text follows the knobs
+      const kn = el("p", { class: "knob-note", "aria-live": "polite" });
+      t.append(el("details", { class: "opts" }, [el("summary", { text: "What s and depth mean here" }), kn]));
       const fx = () => Object.assign({}, NOFX, { [def.key]: st.depth });
       const job = (s, d = 2.5) => ({ dur: d, partials: DEF.partials, fx: fx(), voices: [voice({ f0: st.f0, ghost: st.ghost, s })] });
       options(t, b => {
