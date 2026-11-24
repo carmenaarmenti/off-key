@@ -480,6 +480,77 @@ function fullPieceJob(over = {}) {
   };
 }
 
+addSlide({
+  id: "dato", chain: "Dato → s", kicker: "Passo 1 · Stranezza",
+  title: "Dal numero di sottomissioni alla stranezza s",
+  text: `
+    <p>Ogni conferenza ha 20 valori, uno per anno. Diventano la stranezza s in quattro passaggi.</p>
+    <ol>
+      <li><b>Norma.</b> La mediana delle sottomissioni 2006–2015 della conferenza: ICSE 406,5, FSE 210, ASE 253. È il riferimento del «passato normale». Gli anni successivi non entrano nel calcolo: se ci entrassero, la crescita recente alzerebbe il riferimento stesso e ridurrebbe l'anomalia. La mediana, a differenza della media, non è spostata dai picchi isolati.</li>
+      <li><b>Rapporto.</b> Ogni anno viene espresso in multipli della norma. Così le tre conferenze, di dimensioni diverse, diventano confrontabili.</li>
+      <li><b>Soglia e saturazione.</b> Sotto la soglia s vale 0: è la variazione fisiologica da un anno all'altro. A soglia + saturazione s vale 1. In mezzo cresce in modo lineare. Con la <b>scala comune</b> la saturazione è la stessa per tutte le conferenze. Con la <b>scala per conferenza</b> s vale 1 nell'anno di picco della conferenza.</li>
+      <li><b>Esponente γ.</b> Con γ maggiore di 1 i valori piccoli si riducono più di quelli grandi (0,3<sup>1,3</sup> = 0,21, mentre 0,8<sup>1,3</sup> = 0,75). Il passato resta quieto e il salto recente risalta.</li>
+    </ol>
+    <div class="formula">
+      <div>r = sottomissioni / norma</div>
+      <div>s_lin = min(1, max(0, (r − soglia) / saturazione))</div>
+      <div>s = s_lin ^ γ</div>
+    </div>
+    <p>Per passare da 20 valori a un segnale continuo, ogni valore viene collocato al centro del suo anno, interpolato linearmente fino al successivo e smussato (passo «Tempo»).</p>
+    <div class="listen"><b>Nell'esperimento</b><p>Cambia i parametri e guarda quali anni superano la soglia. L'anteprima fa sentire la conferenza scelta con tutti gli effetti attivi: è quello che costruiremo nei prossimi passi.</p></div>`,
+  build(lab) {
+    const o = { name: "ICSE", threshold: DEF.threshold, saturate: DEF.saturate, satMode: "common", gamma: DEF.gamma };
+    let ph = null;
+    lab.append(el("p", { class: "lab-title", text: "Esperimento" }));
+    const ctls = el("div", { class: "ctls" }); lab.append(ctls);
+    seg(ctls, { label: "Conferenza", options: NAMES.map(n => [n, n]), value: o.name, onChange: v => { o.name = v; redraw(); } });
+    seg(ctls, { label: "Scala della saturazione", options: [["common", "Comune"], ["own", "Per conferenza"]], value: o.satMode, onChange: v => { o.satMode = v; redraw(); } });
+    slider(ctls, { label: "Soglia", min: 1, max: 2, step: 0.05, value: o.threshold, fmt: v => `${fmtN(v)}× norma`, onInput: v => { o.threshold = v; redraw(); } });
+    const satS = slider(ctls, { label: "Saturazione", min: 0.3, max: 3, step: 0.05, value: o.saturate, fmt: v => `+${fmtN(v)}`, onInput: v => { o.saturate = v; redraw(); } });
+    slider(ctls, { label: "Esponente γ", min: 0.5, max: 3, step: 0.05, value: o.gamma, fmt: v => fmtN(v), onInput: v => { o.gamma = v; redraw(); } });
+    const top = plot(lab, 220, (ctx, w, h) => {
+      const norm = normOf(o.name), r = DATA[o.name].map(x => x / norm), sl = sLinear(o.name, o);
+      const satTop = o.satMode === "own" ? Math.max(...r) : o.threshold + o.saturate;
+      const ymax = Math.ceil(Math.max(3, ...r, satTop) + 0.2);
+      const a = axes(ctx, w, h, { x0: -0.5, x1: 19.5, y0: 0, y1: ymax, yTicks: Array.from({ length: ymax + 1 }, (_, i) => i), yFmt: v => v + "×",
+        xTicks: [0, 4, 9, 14, 19], xFmt: i => String(YEARS[i]), yLabel: "multipli della norma" });
+      const bw = (a.X(1) - a.X(0)) * 0.7, col = css(`--${o.name.toLowerCase()}`);
+      r.forEach((v, i) => { ctx.globalAlpha = sl[i] > 0 ? 1 : 0.35; ctx.fillStyle = col; ctx.fillRect(a.X(i) - bw / 2, a.Y(v), bw, a.Y(0) - a.Y(v)); });
+      ctx.globalAlpha = 1;
+      const hline = (v, c, label, dash) => { ctx.strokeStyle = c; ctx.setLineDash(dash); ctx.beginPath(); ctx.moveTo(a.m.l, a.Y(v)); ctx.lineTo(w - a.m.r, a.Y(v)); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = c; ctx.textAlign = "left"; ctx.textBaseline = "bottom"; ctx.fillText(label, a.m.l + 4, a.Y(v) - 2); };
+      hline(1, css("--muted"), "norma", [2, 3]);
+      hline(o.threshold, css("--ink"), "soglia: s = 0", [6, 4]);
+      hline(satTop, css("--accent"), "s = 1", [6, 4]);
+      if (ph != null) { ctx.strokeStyle = css("--accent"); ctx.lineWidth = 2; const x = a.m.l + ph * (w - a.m.l - a.m.r); ctx.beginPath(); ctx.moveTo(x, a.m.t); ctx.lineTo(x, h - a.m.b); ctx.stroke(); }
+    }, "Barre: sottomissioni divise per la norma. Le barre chiare stanno sotto la soglia (s = 0).");
+    const bottom = plot(lab, 150, (ctx, w, h) => {
+      const sl = sLinear(o.name, o);
+      const a = axes(ctx, w, h, { x0: -0.5, x1: 19.5, y0: 0, y1: 1, yTicks: [0, 0.5, 1], yFmt: v => fmtN(v, 1), xTicks: [0, 4, 9, 14, 19], xFmt: i => String(YEARS[i]), yLabel: "s" });
+      const bw = (a.X(1) - a.X(0)) * 0.7;
+      sl.forEach((v, i) => { const s = Math.pow(v, o.gamma); ctx.fillStyle = css("--accent"); ctx.fillRect(a.X(i) - bw / 2, a.Y(s), bw, a.Y(0) - a.Y(s)); });
+      ctx.strokeStyle = css("--muted"); ctx.setLineDash([3, 3]); ctx.beginPath();
+      sl.forEach((v, i) => i ? ctx.lineTo(a.X(i), a.Y(v)) : ctx.moveTo(a.X(i), a.Y(v))); ctx.stroke(); ctx.setLineDash([]);
+      if (ph != null) { ctx.strokeStyle = css("--accent"); ctx.lineWidth = 2; const x = a.m.l + ph * (w - a.m.l - a.m.r); ctx.beginPath(); ctx.moveTo(x, a.m.t); ctx.lineTo(x, h - a.m.b); ctx.stroke(); }
+    }, "Barre: s dopo γ. Linea tratteggiata: s_lin, prima di γ.");
+    const ro = el("div", { class: "readout" }); lab.append(ro);
+    function redraw() {
+      satS.input.disabled = o.satMode === "own";
+      top.redraw(); bottom.redraw();
+      const norm = normOf(o.name), sl = sLinear(o.name, o);
+      const sat = o.satMode === "own" ? Math.max(...DATA[o.name]) / norm - o.threshold : o.saturate;
+      ro.innerHTML = `<div><span>norma ${o.name}:</span> ${fmtN(norm, 1)} sottomissioni</div>
+        <div><span>s inizia a crescere sopra:</span> ${Math.round(norm * o.threshold)} sottomissioni</div>
+        <div><span>s = 1 a:</span> ${Math.round(norm * (o.threshold + sat))} sottomissioni</div>
+        <div><span>s nel 2023 / 2024 / 2025:</span> ${[17, 18, 19].map(i => fmtN(Math.pow(sl[i], o.gamma))).join(" / ")}</div>`;
+    }
+    redraw();
+    plays(lab, [{ label: "Anteprima: questa conferenza in 20 anni", primary: true, onClick: () => playJobs([{
+      dur: 20, partials: DEF.partials, fx: DEF.fx, beat: { vol: DEF.beat, accent: true, spy: 1 },
+      voices: [voice({ ghost: DEF.ghost, s: { type: "curve", values: sLinear(o.name, o), spy: 1, gamma: o.gamma } })]
+    }], `${o.name}, 20 anni, tutti gli effetti`, p => { ph = p ? p.t / 20 : null; top.redraw(); bottom.redraw(); }) }]);
+  }
+});
+
 // @slides-end
 
 // ---------------- navigazione ----------------
