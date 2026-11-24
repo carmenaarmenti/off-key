@@ -1,0 +1,530 @@
+<meta charset="utf-8">
+<title>Anatomia della Stranezza</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: una slide per passo della catena. In alto la catena degli effetti (dove sei), al centro testo tecnico a sinistra ed esperimento a destra, in basso la navigazione. */
+:root {
+  --bg: #eef0f5;
+  --panel: #ffffff;
+  --ink: #161827;
+  --muted: #5b6075;
+  --line: #d8dbe6;
+  --accent: #5847d6;
+  --accent-ink: #ffffff;
+  --accent-soft: #e6e3fb;
+  --plot-bg: #f5f6fa;
+  --ghost: #8a8fa3;
+  --done: #13917f;
+  --icse: #d4473a;
+  --fse: #13917f;
+  --ase: #c47a0c;
+  --font-text: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1017; --panel: #161925; --ink: #e7e8f0; --muted: #9298ad; --line: #292e3d;
+    --accent: #9b8cff; --accent-ink: #12101f; --accent-soft: #262245; --plot-bg: #10131b; --ghost: #737991; --done: #3fcab6;
+    --icse: #ff6f61; --fse: #3fcab6; --ase: #f2aa3c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1017; --panel: #161925; --ink: #e7e8f0; --muted: #9298ad; --line: #292e3d;
+  --accent: #9b8cff; --accent-ink: #12101f; --accent-soft: #262245; --plot-bg: #10131b; --ghost: #737991; --done: #3fcab6;
+  --icse: #ff6f61; --fse: #3fcab6; --ase: #f2aa3c;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-text); font-size: 15px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 16px 0;
+}
+.app { max-width: 1400px; margin: 0 auto; display: grid; gap: 14px; }
+.top { display: grid; gap: 10px; }
+.brand { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
+.brand h1 { font-size: 1.35rem; margin: 0; letter-spacing: -0.02em; }
+.brand p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+.chain { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.chain button {
+  font: 500 0.78rem var(--font-text); border: 1px solid var(--line); background: var(--panel); color: var(--muted);
+  border-radius: 999px; padding: 3px 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;
+}
+.chain button[aria-current="step"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.chain button.done:not([aria-current="step"]) { color: var(--done); border-color: var(--done); }
+.chain button.done::before { content: "✓"; font-weight: 700; }
+.chain .arrow { color: var(--line); font-size: 0.8rem; }
+
+.slide { display: grid; grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); gap: 18px; align-items: start; outline: none; }
+@media (max-width: 960px) { .slide { grid-template-columns: minmax(0, 1fr); } }
+.text { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px 24px; min-width: 0; }
+.text .kicker { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin: 0 0 4px; }
+.text h2 { font-size: 1.55rem; line-height: 1.2; margin: 0 0 12px; letter-spacing: -0.015em; text-wrap: balance; }
+.text h3 { font-size: 1rem; margin: 18px 0 6px; }
+.text p, .text li { max-width: 68ch; }
+.text p { margin: 0 0 10px; }
+.text ul, .text ol { padding-left: 20px; margin: 0 0 10px; }
+.text li { margin-bottom: 6px; }
+.formula {
+  font-family: var(--font-mono); font-size: 0.88rem; background: var(--plot-bg); border: 1px solid var(--line);
+  border-radius: 8px; padding: 10px 14px; margin: 10px 0 14px; overflow-x: auto; white-space: nowrap;
+}
+.formula div + div { margin-top: 4px; }
+.listen { border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 0 8px 8px 0; padding: 10px 14px; margin-top: 14px; }
+.listen b { display: block; font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 2px; }
+.listen p:last-child { margin-bottom: 0; }
+
+.lab { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; display: grid; gap: 14px; min-width: 0; }
+.lab-title { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin: 0; }
+.ctls { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 18px; }
+.ctl { display: grid; gap: 3px; }
+.ctl-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.ctl label { font-weight: 500; font-size: 0.9rem; }
+.val { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ctl .help { font-size: 0.78rem; color: var(--muted); margin: 0; }
+input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
+.s-ctl { background: var(--accent-soft); border-radius: 8px; padding: 8px 10px; }
+.s-ctl label { color: var(--accent); font-weight: 600; }
+button, select { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 7px; padding: 6px 12px; cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--muted); }
+button:disabled { opacity: 0.5; cursor: default; }
+button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.plays { display: flex; flex-wrap: wrap; gap: 8px; }
+.plays button { display: inline-flex; align-items: center; gap: 6px; font-size: 0.88rem; }
+.plays button::before { content: ""; width: 0; height: 0; border-left: 8px solid currentColor; border-top: 5px solid transparent; border-bottom: 5px solid transparent; }
+.seg { display: flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; width: fit-content; max-width: 100%; }
+.seg button { border: 0; border-radius: 0; border-right: 1px solid var(--line); padding: 5px 11px; background: transparent; font-size: 0.85rem; }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.check { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; font-size: 0.88rem; }
+.check input { accent-color: var(--accent); margin: 0; }
+.plot { width: 100%; display: block; background: var(--plot-bg); border: 1px solid var(--line); border-radius: 8px; }
+.cap { font-size: 0.78rem; color: var(--muted); margin: -8px 0 0; }
+.readout { font-family: var(--font-mono); font-size: 0.82rem; font-variant-numeric: tabular-nums; background: var(--plot-bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; display: grid; gap: 2px; overflow-x: auto; }
+.readout span { color: var(--muted); }
+
+.nav {
+  position: sticky; bottom: 0; background: var(--bg); border-top: 1px solid var(--line);
+  padding-block: 10px calc(10px + env(safe-area-inset-bottom, 0px));
+  display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: space-between; z-index: 5;
+}
+.nav-mid { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; color: var(--muted); flex: 1; min-width: 0; }
+.playing { font-family: var(--font-mono); font-size: 0.78rem; color: var(--accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nav-right { display: flex; gap: 8px; }
+
+/* diagramma della catena */
+.flow { display: grid; gap: 8px; }
+.flow .row { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 10px; align-items: stretch; }
+.flow .tag { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding-top: 9px; }
+.flow .boxes { display: flex; flex-wrap: wrap; gap: 6px; }
+.flow .box { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; background: var(--plot-bg); font-size: 0.86rem; }
+.flow .box small { display: block; font-family: var(--font-mono); font-size: 0.72rem; color: var(--muted); }
+.flow .box.s { border-color: var(--accent); background: var(--accent-soft); }
+.flow .down { color: var(--muted); font-size: 0.8rem; padding-left: 122px; line-height: 1; }
+@media (max-width: 520px) { .flow .row { grid-template-columns: minmax(0, 1fr); } .flow .down { padding-left: 8px; } .flow .tag { padding-top: 0; } }
+
+table.map { border-collapse: collapse; width: 100%; font-size: 0.86rem; }
+table.map th, table.map td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.map th { font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.table-wrap { overflow-x: auto; }
+.quiz { border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: grid; gap: 10px; }
+.answers { display: flex; flex-wrap: wrap; gap: 6px; }
+.answers button.right { background: var(--done); border-color: var(--done); color: var(--accent-ink); }
+.answers button.wrong { border-color: var(--icse); color: var(--icse); }
+.feedback { font-size: 0.88rem; min-height: 1.4em; }
+.big-link { display: inline-flex; align-items: center; gap: 8px; background: var(--accent); color: var(--accent-ink); text-decoration: none; font-weight: 600; padding: 12px 18px; border-radius: 10px; width: fit-content; }
+@media (prefers-reduced-motion: no-preference) { .slide { animation: enter 0.25s ease-out; } @keyframes enter { from { opacity: 0.4; transform: translateY(4px); } } }
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <h1>Anatomia della Stranezza</h1>
+      <p>Tutorial agli effetti di «Sottomissioni in Suono»</p>
+    </div>
+    <nav class="chain" id="chain" aria-label="Passi del tutorial"></nav>
+  </header>
+  <main class="slide" id="slide" tabindex="-1"></main>
+  <footer class="nav">
+    <button type="button" id="prev">◀ Indietro</button>
+    <div class="nav-mid"><span id="pos"></span><span class="playing" id="playing" aria-live="polite"></span></div>
+    <div class="nav-right">
+      <button type="button" id="stopAll">Ferma audio</button>
+      <button type="button" id="next" class="primary">Ho capito, avanti ▶</button>
+    </div>
+  </footer>
+</div>
+
+<script id="engine" type="javascript/worker">
+// Motore di sintesi: stesso modello di lab.html e sonify.py.
+const SINN = 8192, SIN = new Float32Array(SINN + 1);
+for (let i = 0; i <= SINN; i++) SIN[i] = Math.sin(2 * Math.PI * i / SINN);
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function boxPass(src, dst, r) {
+  const n = src.length, w = 2 * r + 1; let acc = 0;
+  for (let j = -r; j <= r; j++) acc += src[Math.min(n - 1, Math.max(0, j))];
+  for (let i = 0; i < n; i++) { dst[i] = acc / w; acc += src[Math.min(n - 1, i + r + 1)] - src[Math.max(0, i - r)]; }
+}
+function smooth(a, sigma) {
+  if (sigma < 1) return a;
+  const r = Math.floor(Math.round(Math.sqrt(4 * sigma * sigma + 1)) / 2);
+  let A = a, B = new Float32Array(a.length);
+  for (let k = 0; k < 3; k++) { boxPass(A, B, r); const t = A; A = B; B = t; }
+  return A;
+}
+// s(t): costante, rampa lineare o curva dai valori annuali (interpolata, smussata, elevata a gamma)
+function sCurve(spec, n, sr) {
+  let s = new Float32Array(n);
+  if (spec.type === "const") s.fill(spec.v);
+  else if (spec.type === "ramp") { for (let i = 0; i < n; i++) s[i] = spec.from + (spec.to - spec.from) * i / Math.max(1, n - 1); }
+  else {
+    const v = spec.values, NY = v.length, spy = spec.spy;
+    for (let i = 0; i < n; i++) {
+      const ty = i / sr / spy - 0.5, k = Math.floor(ty);
+      s[i] = ty <= 0 ? v[0] : k >= NY - 1 ? v[NY - 1] : v[k] + (v[k + 1] - v[k]) * (ty - k);
+    }
+    s = smooth(s, 0.25 * spy * sr);
+    for (let i = 0; i < n; i++) s[i] = Math.pow(Math.max(0, s[i]), spec.gamma);
+  }
+  return s;
+}
+function render(job) {
+  const sr = job.sr, n = Math.max(1, Math.round(job.dur * sr));
+  const L = new Float32Array(n), R = new Float32Array(n);
+  const rng = mulberry32(job.seed || 7);
+  const gauss = () => { let u = 0; while (u === 0) u = rng(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rng()); };
+  const fx = job.fx, NP = job.partials, nyq = 0.45 * sr, TWO_PI = 2 * Math.PI, BS = 32, nb = Math.ceil(n / BS);
+  const TB = 4096, table = new Float32Array(TB);
+  for (let k = 1; k <= NP; k++) { const a = Math.pow(k, -2.2); for (let i = 0; i < TB; i++) table[i] += a * Math.sin(TWO_PI * k * i / TB); }
+  let tm = 0; for (let i = 0; i < TB; i++) tm = Math.max(tm, Math.abs(table[i])); for (let i = 0; i < TB; i++) table[i] /= tm || 1;
+
+  for (const vc of job.voices) {
+    const s = sCurve(vc.s, n, sr);
+    const gl = Math.sqrt((1 - vc.pan) / 2), gr = Math.sqrt((1 + vc.pan) / 2);
+    let x = null;
+    if (vc.note !== false) {
+      const sC = new Float32Array(nb + 1), fC = new Float32Array(nb + 1);
+      for (let b = 0; b <= nb; b++) sC[b] = s[Math.min(n - 1, b * BS)];
+      let jn = null;
+      if (fx.jitter > 0) {
+        jn = new Float32Array(nb + 1); for (let b = 0; b <= nb; b++) jn[b] = gauss();
+        jn = smooth(jn, 0.03 * sr / BS);
+        let m = 0; for (let b = 0; b <= nb; b++) m = Math.max(m, Math.abs(jn[b]));
+        for (let b = 0; b <= nb; b++) jn[b] /= m || 1;
+      }
+      for (let b = 0; b <= nb; b++) {
+        let c = vc.dir * fx.detune * sC[b]; if (jn) c += fx.jitter * jn[b] * sC[b];
+        fC[b] = vc.f0 * Math.pow(2, c / 1200);
+      }
+      const B = fx.inharm / 1000, T = fx.bright;
+      x = new Float32Array(n);
+      for (let k = 1; k <= NP; k++) {
+        let ph = rng(); const k2 = k * k, lk = Math.log(k), base = Math.pow(k, -2.2);
+        const gate = b => job.buildup ? Math.max(0, Math.min(1, (b * BS / sr - (k - 1) * job.buildup) / 0.06)) : 1;
+        const fkAt = b => B > 0 ? k * fC[b] * Math.sqrt(1 + B * sC[b] * k2) : k * fC[b];
+        const ampAt = (b, fk) => fk >= nyq ? 0 : (T > 0 ? base * Math.exp(T * sC[b] * lk) : base) * gate(b);
+        let fa = fkAt(0), aa = ampAt(0, fa);
+        for (let b = 0; b < nb; b++) {
+          const fb = fkAt(b + 1), ab = ampAt(b + 1, fb);
+          const i0 = b * BS, i1 = Math.min(n, i0 + BS), len = i1 - i0;
+          if (aa === 0 && ab === 0) { ph += (fa + fb) / 2 / sr * len; ph -= Math.floor(ph); fa = fb; aa = ab; continue; }
+          let inc = fa / sr, amp = aa; const dinc = (fb - fa) / sr / len, damp = (ab - aa) / len;
+          for (let i = i0; i < i1; i++) {
+            const p = ph * SINN, j = p | 0;
+            x[i] += amp * (SIN[j] + (SIN[j + 1] - SIN[j]) * (p - j));
+            ph += inc; if (ph >= 1) ph -= 1; inc += dinc; amp += damp;
+          }
+          fa = fb; aa = ab;
+        }
+      }
+      let m = 0; for (let i = 0; i < n; i++) m = Math.max(m, Math.abs(x[i])); m = m || 1;
+      for (let i = 0; i < n; i++) {
+        let v = x[i] / m;
+        if (fx.fold > 0) { const si = s[i]; v = (1 - si) * v + si * Math.sin(Math.PI / 2 * (1 + fx.fold * si) * v); }
+        if (job.breath) { const sn = Math.sin(TWO_PI * 0.11 * i / sr + vc.f0); v *= 0.6 + 0.4 * sn * sn; }
+        x[i] = v;
+      }
+    }
+    let gph = 0; const ginc = vc.f0 / sr * TB, gv = vc.ghost || 0;
+    for (let i = 0; i < n; i++) {
+      let v = x ? x[i] : 0;
+      if (gv > 0) { const gi = gph | 0, gf = gph - gi; v += gv * (table[gi] + (table[(gi + 1) % TB] - table[gi]) * gf); gph += ginc; if (gph >= TB) gph -= TB; }
+      L[i] += v * gl; R[i] += v * gr;
+    }
+  }
+  let peak = 0; for (let i = 0; i < n; i++) peak = Math.max(peak, Math.abs(L[i]), Math.abs(R[i]));
+  const g = peak > 0 ? 0.85 / peak : 0;
+  for (let i = 0; i < n; i++) { L[i] *= g; R[i] *= g; }
+  if (job.beat && job.beat.vol > 0) {
+    const bt = job.beat, len = Math.round(0.3 * sr), NY = Math.round(job.dur / bt.spy);
+    for (let y = 0; y < NY; y++) {
+      const accent = bt.accent && (2006 + y) % 5 === 0, st = Math.round(y * bt.spy * sr), a = bt.vol * (accent ? 0.9 : 0.5);
+      for (let j = 0; j < len && st + j < n; j++) {
+        const t = j / sr;
+        let v = 0.7 * Math.sin(TWO_PI * 1250 * t) * Math.exp(-t / 0.010) + 0.35 * Math.sin(TWO_PI * 2780 * t) * Math.exp(-t / 0.006);
+        if (accent) v += 0.9 * Math.sin(TWO_PI * 62 * t) * Math.exp(-t / 0.09);
+        L[st + j] += v * a; R[st + j] += v * a;
+      }
+    }
+    let pk = 0; for (let i = 0; i < n; i++) pk = Math.max(pk, Math.abs(L[i]), Math.abs(R[i]));
+    if (pk > 0.98) { const k = 0.98 / pk; for (let i = 0; i < n; i++) { L[i] *= k; R[i] *= k; } }
+  }
+  const fe = Math.min(n >> 1, Math.round(0.015 * sr));
+  for (let i = 0; i < fe; i++) { const w = i / fe; L[i] *= w; R[i] *= w; L[n - 1 - i] *= w; R[n - 1 - i] *= w; }
+  return { L, R, sr };
+}
+self.onmessage = e => {
+  const r = render(e.data.job);
+  self.postMessage({ id: e.data.id, L: r.L, R: r.R, sr: r.sr }, [r.L.buffer, r.R.buffer]);
+};
+</script>
+
+<script>
+(function () {
+"use strict";
+// ---------------- dati e valori predefiniti (uguali a lab.html) ----------------
+const YEARS = []; for (let y = 2006; y <= 2025; y++) YEARS.push(y);
+const DATA = {
+  ICSE: [395,334,371,405,380,441,408,461,496,452,530,415,502,529,617,615,691,780,1049,1150],
+  FSE:  [125,251,152,217,169,203,201,251,273,291,266,295,295,303,360,407,449,465,474,515],
+  ASE:  [121,312,280,220,190,252,138,254,276,289,284,367,386,448,395,440,531,633,587,1181]
+};
+const NAMES = ["ICSE", "FSE", "ASE"];
+const CHORD = { ICSE: { f0: 110, pan: -0.7, dir: -1 }, FSE: { f0: 165, pan: 0, dir: 1 }, ASE: { f0: 220, pan: 0.7, dir: 1 } };
+const DEF = { sr: 44100, partials: 28, f0: 220, ghost: 0.35, threshold: 1.25, saturate: 1.4, gamma: 1.3, satMode: "common", spy: 1, beat: 0.5, accent: true, breath: false,
+  fx: { detune: 90, jitter: 20, inharm: 2.5, bright: 1.2, fold: 5 } };
+const NOFX = { detune: 0, jitter: 0, inharm: 0, bright: 0, fold: 0 };
+const median = a => { const s = a.slice().sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+const normOf = name => median(DATA[name].slice(0, 10));
+function sLinear(name, o) {
+  const norm = normOf(name), v = DATA[name];
+  const sat = o.satMode === "own" ? Math.max(0.05, Math.max(...v) / norm - o.threshold) : o.saturate;
+  return v.map(x => Math.min(1, Math.max(0, (x / norm - o.threshold) / sat)));
+}
+const fmtN = (v, d = 2) => v.toLocaleString("it-IT", { minimumFractionDigits: d, maximumFractionDigits: d });
+
+// ---------------- utilità DOM ----------------
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function el(tag, attrs = {}, kids = []) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "text") e.textContent = v; else if (k === "html") e.innerHTML = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v);
+  }
+  for (const c of [].concat(kids)) if (c != null) e.append(c);
+  return e;
+}
+let uid = 0;
+function slider(parent, o) {
+  const id = `c${++uid}`, val = el("span", { class: "val" });
+  const input = el("input", { type: "range", id, min: o.min, max: o.max, step: o.step });
+  input.value = o.value;
+  const show = () => { val.textContent = o.fmt(parseFloat(input.value)); };
+  input.addEventListener("input", () => { show(); o.onInput(parseFloat(input.value)); });
+  show();
+  const box = el("div", { class: "ctl" + (o.cls ? " " + o.cls : "") }, [
+    el("div", { class: "ctl-head" }, [el("label", { for: id, text: o.label }), val]), input,
+    o.help ? el("p", { class: "help", text: o.help }) : null
+  ]);
+  parent.append(box);
+  return { input, set(v) { input.value = v; show(); } };
+}
+function seg(parent, o) {
+  const box = el("div", { class: "ctl" }, [el("label", { text: o.label })]);
+  const wrap = el("div", { class: "seg", role: "group", "aria-label": o.label });
+  let cur = o.value;
+  const btns = o.options.map(([v, t]) => {
+    const b = el("button", { type: "button", text: t, onclick: () => { cur = v; sync(); o.onChange(v); } });
+    wrap.append(b); return [v, b];
+  });
+  const sync = () => btns.forEach(([v, b]) => b.setAttribute("aria-pressed", String(v === cur)));
+  sync(); box.append(wrap); if (o.help) box.append(el("p", { class: "help", text: o.help }));
+  parent.append(box);
+  return box;
+}
+function check(parent, label, value, onChange) {
+  const id = `c${++uid}`, input = el("input", { type: "checkbox", id });
+  input.checked = value; input.addEventListener("change", () => onChange(input.checked));
+  const l = el("label", { class: "check", for: id }, [input, label]); parent.append(l); return input;
+}
+function plays(parent, list) {
+  const box = el("div", { class: "plays" });
+  for (const p of list) box.append(el("button", { type: "button", text: p.label, class: p.primary ? "primary" : "", onclick: p.onClick }));
+  parent.append(box); return box;
+}
+// canvas con gestione della densità di pixel e del ridisegno
+function plot(parent, height, draw, caption) {
+  const cv = el("canvas", { class: "plot" }); cv.style.height = height + "px";
+  parent.append(cv);
+  if (caption) parent.append(el("p", { class: "cap", text: caption }));
+  const ctx = cv.getContext("2d");
+  const api = { cv, ctx, w: 0, h: height, redraw() {
+    const dpr = window.devicePixelRatio || 1, w = cv.clientWidth; if (!w) return;
+    cv.width = Math.round(w * dpr); cv.height = Math.round(height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, height); api.w = w; draw(ctx, w, height);
+  } };
+  new ResizeObserver(() => api.redraw()).observe(cv);
+  return api;
+}
+// assi cartesiani: restituisce le funzioni di scala
+function axes(ctx, w, h, o) {
+  const m = Object.assign({ l: 48, r: 12, t: 12, b: 28 }, o.m || {});
+  const X = v => m.l + (v - o.x0) / (o.x1 - o.x0) * (w - m.l - m.r);
+  const Y = v => h - m.b - (v - o.y0) / (o.y1 - o.y0) * (h - m.t - m.b);
+  ctx.font = `11px ${css("--font-mono")}`; ctx.lineWidth = 1;
+  ctx.strokeStyle = css("--line"); ctx.fillStyle = css("--muted");
+  ctx.textAlign = "right"; ctx.textBaseline = "middle";
+  for (const v of o.yTicks || []) { ctx.beginPath(); ctx.moveTo(m.l, Y(v)); ctx.lineTo(w - m.r, Y(v)); ctx.stroke(); ctx.fillText(o.yFmt ? o.yFmt(v) : String(v), m.l - 6, Y(v)); }
+  ctx.textAlign = "center"; ctx.textBaseline = "top";
+  for (const v of o.xTicks || []) { ctx.beginPath(); ctx.moveTo(X(v), h - m.b); ctx.lineTo(X(v), h - m.b + 4); ctx.stroke(); ctx.fillText(o.xFmt ? o.xFmt(v) : String(v), X(v), h - m.b + 6); }
+  if (o.xLabel) { ctx.textAlign = "right"; ctx.fillText(o.xLabel, w - m.r, h - 12); }
+  if (o.yLabel) { ctx.save(); ctx.translate(11, (m.t + h - m.b) / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(o.yLabel, 0, 0); ctx.restore(); }
+  return { X, Y, m };
+}
+
+// ---------------- motore audio ----------------
+const worker = new Worker(URL.createObjectURL(new Blob([document.getElementById("engine").textContent], { type: "text/javascript" })));
+let jobSeq = 0; const pending = new Map();
+worker.onmessage = e => { const r = pending.get(e.data.id); pending.delete(e.data.id); if (r) r(e.data); };
+const synth = job => new Promise(res => { const id = ++jobSeq; pending.set(id, res); worker.postMessage({ id, job: Object.assign({ sr: DEF.sr }, job) }); });
+// una voce: nota (f0, direzione, panorama) con s costante, rampa o curva annuale
+const voice = (o = {}) => Object.assign({ f0: DEF.f0, dir: 1, pan: 0, ghost: 0, s: { type: "const", v: 0 } }, o);
+
+let actx = null, src = null, t0 = 0, dur = 0, onProg = null, raf = 0, token = 0;
+const playingEl = document.getElementById("playing");
+function ensureCtx() { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); actx.resume(); }
+function stopAudio() {
+  token++;
+  if (src) { const s = src; src = null; try { s.stop(); } catch (e) {} }
+  cancelAnimationFrame(raf); playingEl.textContent = "";
+  if (onProg) { const f = onProg; onProg = null; f(null); }
+}
+// clips: lista di job; vengono calcolati, concatenati con una breve pausa e suonati
+async function playJobs(jobs, label, progress) {
+  ensureCtx(); stopAudio();
+  const my = token; playingEl.textContent = "Calcolo…";
+  const clips = await Promise.all(jobs.map(synth));
+  if (my !== token) return;
+  const sr = clips[0].sr, gap = Math.round(0.35 * sr);
+  const total = clips.reduce((a, c) => a + c.L.length, 0) + gap * (clips.length - 1);
+  const buf = actx.createBuffer(2, total, sr), l = buf.getChannelData(0), r = buf.getChannelData(1);
+  let o = 0; const marks = [];
+  for (const c of clips) { l.set(c.L, o); r.set(c.R, o); marks.push([o / sr, (o + c.L.length) / sr]); o += c.L.length + gap; }
+  const node = actx.createBufferSource(); node.buffer = buf; node.connect(actx.destination);
+  node.onended = () => { if (src === node) { src = null; cancelAnimationFrame(raf); playingEl.textContent = ""; if (onProg) { const f = onProg; onProg = null; f(null); } } };
+  node.start(); src = node; t0 = actx.currentTime; dur = total / sr; onProg = progress || null;
+  playingEl.textContent = "▶ " + label;
+  const tick = () => {
+    if (src !== node) return;
+    const t = actx.currentTime - t0;
+    if (onProg) { const i = marks.findIndex(([a, b]) => t >= a && t <= b); onProg(i < 0 ? null : { clip: i, frac: (t - marks[i][0]) / (marks[i][1] - marks[i][0]), t }); }
+    raf = requestAnimationFrame(tick);
+  };
+  raf = requestAnimationFrame(tick);
+}
+document.getElementById("stopAll").addEventListener("click", stopAudio);
+
+// ---------------- slide ----------------
+const SLIDES = [];
+function addSlide(def) { SLIDES.push(def); }
+
+// =============== INIZIO DELLE SLIDE ===============
+
+addSlide({
+  id: "inizio", chain: "Inizio", kicker: "Introduzione",
+  title: "Come una sonificazione rende udibile un'anomalia",
+  text: `
+    <p>Questo tutorial ricostruisce, un passo alla volta, il suono di «Sottomissioni in Suono»: la sonificazione delle sottomissioni a ICSE, FSE e ASE dal 2006 al 2025. Alla fine sarai in grado di riconoscere ogni effetto nel brano completo e di usare tutti i controlli del tool.</p>
+    <h3>Il modello: una catena di trasformazioni</h3>
+    <p>Il suono nasce da una nota pulita che attraversa una catena di effetti, nello stesso ordine in cui il programma li calcola. I dati non controllano direttamente il suono: producono un solo numero, la <b>stranezza s(t)</b>, compreso tra 0 e 1, che varia nel tempo.</p>
+    <p>s(t) funziona come una manopola comune collegata a tutti gli effetti. Ogni effetto ha una propria <b>profondità</b>, cioè il valore che raggiunge quando s = 1. In ogni istante:</p>
+    <div class="formula"><div>intensità dell'effetto(t) = profondità × s(t)</div></div>
+    <p>Con s = 0 la nota attraversa la catena senza modifiche. Più i dati si allontanano dal passato, più s cresce e più tutti gli effetti agiscono insieme.</p>
+    <h3>Come usare le slide</h3>
+    <ul>
+      <li>A sinistra la spiegazione tecnica, a destra un esperimento su una sola nota con <b>un solo effetto attivo</b>.</li>
+      <li>Muovi s a mano o ascolta la rampa da 0 a 1, e confronta la nota pulita con quella trasformata.</li>
+      <li>Quando l'effetto ti è chiaro premi «Ho capito, avanti». Puoi tornare a qualsiasi passo dalla catena in alto o con i tasti ← e →.</li>
+    </ul>`,
+  build(lab) {
+    lab.append(el("p", { class: "lab-title", text: "La catena, nell'ordine di calcolo" }));
+    const flow = el("div", { class: "flow" });
+    const row = (tag, boxes) => flow.append(el("div", { class: "row" }, [el("div", { class: "tag", text: tag }), el("div", { class: "boxes" }, boxes.map(([t, s, cls]) => el("div", { class: "box" + (cls ? " " + cls : "") }, [t, s ? el("small", { text: s }) : null])))]));
+    const down = () => flow.append(el("div", { class: "down", text: "↓" }));
+    row("Dati", [["Sottomissioni per anno", "20 valori per conferenza"]]); down();
+    row("Stranezza", [["s(t) tra 0 e 1", "norma · soglia · saturazione · γ", "s"]]); down();
+    row("Nota", [["Somma di parziali", "f₀ · N parziali · k^−2,2"]]); down();
+    row("Altezza", [["Detune", "× s(t)"], ["Jitter", "× s(t)"]]); down();
+    row("Parziali", [["Inarmonicità", "posizione · × s(t)"], ["Spectral tilt", "ampiezza · × s(t)"]]); down();
+    row("Forma d'onda", [["Wavefolding", "× s(t)"]]); down();
+    row("Riferimento", [["+ Voce fantasma", "nota pulita, fissa"]]); down();
+    row("Mix e tempo", [["Accordo a 3 voci", "panorama stereo"], ["Beat annuale", "accento ogni 5 anni"]]);
+    lab.append(flow);
+    lab.append(el("p", { class: "cap", text: "Ogni riquadro con «× s(t)» è un effetto la cui intensità segue la stranezza. Gli altri sono fissi." }));
+    plays(lab, [{ label: "Ascolta dove arriveremo: il brano completo", primary: true, onClick: () => playJobs([fullPieceJob()], "Brano completo, accordo, 20 anni") }]);
+  }
+});
+
+// brano completo con le impostazioni predefinite (usato in più slide)
+function fullPieceJob(over = {}) {
+  const o = Object.assign({}, DEF, over), fx = Object.assign({}, DEF.fx, over.fx || {});
+  return {
+    dur: 20 * o.spy, partials: o.partials, fx, breath: o.breath,
+    beat: { vol: o.beat, accent: o.accent, spy: o.spy },
+    voices: NAMES.filter(n => !over.only || over.only.includes(n)).map(n => voice({ f0: CHORD[n].f0, dir: CHORD[n].dir, pan: CHORD[n].pan, ghost: over.ghost ?? DEF.ghost,
+      s: { type: "curve", values: sLinear(n, { threshold: o.threshold, saturate: o.saturate, satMode: "common" }), spy: o.spy, gamma: o.gamma } }))
+  };
+}
+
+// @slides-end
+
+// ---------------- navigazione ----------------
+const chainEl = document.getElementById("chain"), slideEl = document.getElementById("slide");
+const posEl = document.getElementById("pos"), prevBtn = document.getElementById("prev"), nextBtn = document.getElementById("next");
+let done = new Set();
+try { done = new Set(JSON.parse(localStorage.getItem("anatomia-done") || "[]")); } catch (e) {}
+const saveDone = () => { try { localStorage.setItem("anatomia-done", JSON.stringify([...done])); } catch (e) {} };
+let cur = 0;
+function renderChain() {
+  chainEl.textContent = "";
+  SLIDES.forEach((s, i) => {
+    if (i) chainEl.append(el("span", { class: "arrow", "aria-hidden": "true", text: "→" }));
+    const b = el("button", { type: "button", text: s.chain, onclick: () => go(i) });
+    if (done.has(s.id)) b.classList.add("done");
+    if (i === cur) b.setAttribute("aria-current", "step");
+    chainEl.append(b);
+  });
+}
+function go(i) {
+  i = Math.max(0, Math.min(SLIDES.length - 1, i));
+  stopAudio(); cur = i;
+  const s = SLIDES[i];
+  slideEl.textContent = "";
+  const text = el("article", { class: "text" }, [el("p", { class: "kicker", text: s.kicker }), el("h2", { text: s.title })]);
+  text.insertAdjacentHTML("beforeend", s.text);
+  const lab = el("section", { class: "lab", "aria-label": "Esperimento" });
+  slideEl.append(text, lab);
+  s.build(lab);
+  posEl.textContent = `Passo ${i + 1} di ${SLIDES.length}`;
+  prevBtn.disabled = i === 0;
+  nextBtn.textContent = i === SLIDES.length - 1 ? "Ho capito ✓" : "Ho capito, avanti ▶";
+  renderChain();
+  if (location.hash !== "#" + s.id) history.replaceState(null, "", "#" + s.id);
+  window.scrollTo({ top: 0 });
+  slideEl.focus({ preventScroll: true });
+}
+prevBtn.addEventListener("click", () => go(cur - 1));
+nextBtn.addEventListener("click", () => { done.add(SLIDES[cur].id); saveDone(); if (cur < SLIDES.length - 1) go(cur + 1); else renderChain(); });
+document.addEventListener("keydown", e => {
+  if (e.target.matches("input, select, textarea")) return;
+  if (e.key === "ArrowRight") go(cur + 1); else if (e.key === "ArrowLeft") go(cur - 1);
+});
+window.addEventListener("hashchange", () => { const i = SLIDES.findIndex(s => "#" + s.id === location.hash); if (i >= 0 && i !== cur) go(i); });
+const start = SLIDES.findIndex(s => "#" + s.id === location.hash);
+go(start >= 0 ? start : 0);
+})();
+</script>
