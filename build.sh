@@ -23,7 +23,7 @@ wrap "$here/tutorial.html" > "$out/tutorial.html"
 wrap "$here/lab.html" > "$out/lab.html"
 wrap "$here/glossary.html" > "$out/glossary.html"
 cp "$here/glossary-data.js" "$out/glossary-data.js"
-cp "$here/assets/logo.svg" "$here/assets/off-key-chord.m4a" "$out/assets/"
+cp "$here/assets/logo.svg" "$here/assets/off-key-chord.mp4" "$out/assets/"
 if [ "$mode" = "--site" ]; then
   wrap "$here/welcome.html" > "$out/index.html"
 else

@@ -21,7 +21,7 @@ The logo is a sine wave passed through the model's own wavefolding, with strange
 | `glossary.html` | The glossary: one page per concept, with narrower ideas as its sections, and an index of all concepts |
 | `glossary-data.js` | The concepts themselves, shared by the tutorial (for its links) and the glossary page |
 | `lab.html` | The full tool: every parameter, a 3D spectrogram, a Pitch view, a time bar, and settings you can save to and load from a JSON file |
-| `assets/` | The logo (`logo.svg`, also the favicon) and the preview played on the welcome page (`off-key-chord.m4a`, the default chord rendered by `sonify.py` and encoded with `afconvert -f m4af -d aac -b 128000`) |
+| `assets/` | The logo (`logo.svg`, also the favicon) and the preview played on the welcome page (`off-key-chord.mp4`, the default chord rendered by `sonify.py` and encoded as AAC with `afconvert -f m4af -d aac -b 128000`; the `.mp4` name is because claude.ai does not serve `.m4a`) |
 | `sonify.py` | Renders WAV files with the same model, reading settings exported from the tool |
 | `build.sh` | Packages the pages, either for claude.ai or, with `--site`, for an ordinary web host; the welcome page becomes `index.html` |
 | `.github/workflows/pages.yml` | Builds the site and publishes it to GitHub Pages on every push to `main` |
