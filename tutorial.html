@@ -948,6 +948,60 @@ addSlide({
   }
 });
 
+// s continua come nel motore, a 50 campioni per anno
+function sContinuous(vals, gamma, P = 50) {
+  const n = vals.length * P; let s = new Array(n);
+  for (let i = 0; i < n; i++) { const ty = i / P - 0.5, k = Math.floor(ty); s[i] = ty <= 0 ? vals[0] : k >= vals.length - 1 ? vals[vals.length - 1] : vals[k] + (vals[k + 1] - vals[k]) * (ty - k); }
+  const sig = 0.25 * P, r = Math.floor(Math.round(Math.sqrt(4 * sig * sig + 1)) / 2);
+  for (let p = 0; p < 3; p++) s = s.map((_, i) => { let a = 0; for (let j = -r; j <= r; j++) a += s[Math.min(n - 1, Math.max(0, i + j))]; return a / (2 * r + 1); });
+  return s.map(v => Math.pow(Math.max(0, v), gamma));
+}
+
+addSlide({
+  id: "tempo", chain: "Tempo", kicker: "Passo 9 · Tempo",
+  title: "Il tempo: anni, smussamento e beat",
+  text: `
+    <p>Il brano dura 20 anni × la durata di un anno (predefinita 1 s, quindi 20 s). Tre elementi organizzano il tempo.</p>
+    <h3>Smussamento di s</h3>
+    <p>La stranezza ha un solo valore per anno. Il valore viene collocato al centro dell'anno e interpolato linearmente fino al centro dell'anno successivo. La curva a gradini diventa così una spezzata. Poi viene filtrata con tre medie mobili successive, equivalenti a un filtro gaussiano con deviazione standard pari a ¼ di anno, che ne arrotonda gli spigoli. L'esponente γ si applica dopo lo smussamento.</p>
+    <p>Gli effetti cambiano quindi in modo continuo, senza scatti in corrispondenza dei confini tra anni. La conseguenza è che il cambiamento di un anno comincia a sentirsi già nella seconda metà dell'anno precedente.</p>
+    <h3>Beat annuale</h3>
+    <p>All'inizio di ogni anno suona un click percussivo, somma di due sinusoidi smorzate esponenzialmente: 1250 Hz con costante di tempo 10 ms e 2780 Hz con 6 ms. È molto breve, quindi non ha un'altezza che interferisca con l'accordo. Negli anni multipli di 5 (2010, 2015, 2020, 2025) si aggiunge un accento: una sinusoide a 62 Hz con costante di tempo 90 ms. Il beat non dipende dai dati: serve a orientarsi nel tempo.</p>
+    <h3>Respiro lento (opzionale)</h3>
+    <p>Una modulazione d'ampiezza a 0,11 Hz, 0,6 + 0,4 · sin²(2π · 0,11 · t), spenta per impostazione predefinita. Non porta informazione e aggiunge fluttuazioni allo spettrogramma, per questo è disattivata.</p>
+    <div class="listen"><b>Cosa ascoltare</b><p>Ascolta prima il solo beat per sentire la griglia dei 20 anni e degli accenti. Poi il brano completo: gli effetti crescono in modo graduale e il punto di massimo cambiamento cade tra il 2023 e il 2025.</p></div>`,
+  build(lab) {
+    const st = { spy: DEF.spy, beat: DEF.beat, accent: DEF.accent, breath: DEF.breath };
+    let ph = null;
+    lab.append(el("p", { class: "lab-title", text: "Esperimento · la linea del tempo" }));
+    const ctls = el("div", { class: "ctls" }); lab.append(ctls);
+    slider(ctls, { label: "Durata di un anno", min: 0.4, max: 2, step: 0.05, value: st.spy, fmt: v => `${fmtN(v)} s`, onInput: v => { st.spy = v; } });
+    slider(ctls, { label: "Volume del beat", min: 0, max: 1, step: 0.05, value: st.beat, fmt: v => v ? Math.round(v * 100) + "%" : "spento", onInput: v => { st.beat = v; } });
+    const cbox = el("div", { class: "ctl" }); ctls.append(cbox);
+    check(cbox, "Accento ogni 5 anni", st.accent, v => { st.accent = v; c.redraw(); });
+    check(cbox, "Respiro lento", st.breath, v => { st.breath = v; });
+    const c = plot(lab, 240, (ctx, w, h) => {
+      const a = axes(ctx, w, h, { x0: 0, x1: 20, y0: -0.12, y1: 1, yTicks: [0, 0.5, 1], yFmt: v => fmtN(v, 1), xTicks: [0, 4, 9, 14, 19], xFmt: i => String(YEARS[i]), yLabel: "s" });
+      for (let y = 0; y < 20; y++) { const acc = st.accent && YEARS[y] % 5 === 0; ctx.strokeStyle = css("--muted"); ctx.lineWidth = acc ? 2.5 : 1; ctx.beginPath(); ctx.moveTo(a.X(y), a.Y(-0.12)); ctx.lineTo(a.X(y), a.Y(acc ? -0.02 : -0.06)); ctx.stroke(); }
+      ctx.lineWidth = 1;
+      NAMES.forEach(n => {
+        const vals = sLinear(n, { threshold: DEF.threshold, saturate: DEF.saturate, satMode: "common" }), col = css(`--${n.toLowerCase()}`);
+        ctx.strokeStyle = col; ctx.globalAlpha = 0.45; ctx.beginPath();
+        vals.forEach((v, i) => { const s = Math.pow(v, DEF.gamma); i ? ctx.lineTo(a.X(i), a.Y(s)) : ctx.moveTo(a.X(i), a.Y(s)); ctx.lineTo(a.X(i + 1), a.Y(s)); }); ctx.stroke();
+        ctx.globalAlpha = 1; ctx.lineWidth = 2.2; ctx.beginPath();
+        sContinuous(vals, DEF.gamma).forEach((s, i) => { const x = a.X(i / 50); i ? ctx.lineTo(x, a.Y(s)) : ctx.moveTo(x, a.Y(s)); }); ctx.stroke(); ctx.lineWidth = 1;
+      });
+      if (ph != null) { ctx.strokeStyle = css("--accent"); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(a.X(ph * 20), a.m.t); ctx.lineTo(a.X(ph * 20), h - a.m.b); ctx.stroke(); ctx.lineWidth = 1; }
+    }, "Gradini chiari: un valore di s per anno. Linee piene: s continua dopo interpolazione e smussamento. Tacche in basso: beat, più lunghe negli accenti.");
+    lab.append(el("div", { class: "keys-row plays" }, NAMES.map(n => { const s = el("span", { class: "check", text: n }); s.style.color = css(`--${n.toLowerCase()}`); return s; })));
+    const prog = p => { ph = p ? p.t / (20 * st.spy) : null; c.redraw(); };
+    plays(lab, [
+      { label: "Solo beat (20 anni)", onClick: () => playJobs([{ dur: 20 * st.spy, partials: DEF.partials, fx: NOFX, voices: [], beat: { vol: Math.max(st.beat, 0.3), accent: st.accent, spy: st.spy } }], "Beat annuale", prog) },
+      { label: "Brano completo con queste impostazioni", primary: true, onClick: () => playJobs([fullPieceJob({ spy: st.spy, beat: st.beat, accent: st.accent, breath: st.breath })], "Brano completo", prog) }
+    ]);
+  }
+});
+
 // @slides-end
 
 // ---------------- navigazione ----------------
