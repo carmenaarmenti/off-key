@@ -1,46 +1,46 @@
-# Sottomissioni in Suono
+# Submissions in Sound
 
-Sonificazione delle sottomissioni a ICSE, FSE e ASE dal 2006 al 2025. Ogni conferenza è una nota. Più le sottomissioni di un anno si allontanano dalla norma storica (mediana 2006–2015), più la nota si deforma.
+A sonification of submissions to ICSE, FSE and ASE from 2006 to 2025. Each conference is a note. The further a year's submissions drift from the historical baseline (the 2006–2015 median), the more the note warps.
 
-## File
+## Files
 
-| File | Cosa contiene |
+| File | Contents |
 |---|---|
-| `tutorial.html` | «Anatomia della Stranezza»: tutorial a slide, un effetto per slide, con esperimenti audio su una sola nota e un quiz di riconoscimento |
-| `lab.html` | Il tool completo: tutti i parametri, spettrogramma 3D, barra del tempo, esportazione delle impostazioni |
-| `sonify.py` | Genera i file WAV con lo stesso modello, leggendo le impostazioni esportate dal tool |
-| `build.sh` | Prepara tutorial e tool per la pubblicazione come un'unica pagina con due viste |
+| `tutorial.html` | "Anatomy of Strangeness": a slide tutorial, one effect per slide, with audio experiments on a single note and a recognition quiz |
+| `lab.html` | The full tool: every parameter, a 3D spectrogram, a time bar and settings export |
+| `sonify.py` | Renders WAV files with the same model, reading settings exported from the tool |
+| `build.sh` | Packages the tutorial and the tool for publishing as one page with two views |
 
-## Modello
+## Model
 
-1. **Stranezza s(t)** tra 0 e 1: `r = sottomissioni / norma`, `s = clip((r − soglia) / saturazione)^γ`, interpolata tra gli anni e smussata (¼ di anno).
-2. **Nota**: somma di N parziali armoniche, ampiezze `k^−2,2`.
-3. **Effetti**, ciascuno con intensità `profondità × s(t)`, nell'ordine di calcolo:
-   detune → jitter → inarmonicità → spectral tilt → wavefolding.
-4. **Voce fantasma**: la nota di partenza senza effetti, aggiunta dopo il wavefolding.
-5. **Mix**: accordo ICSE 110 Hz, FSE 165 Hz, ASE 220 Hz (quinta giusta e ottava), panorama stereo, beat annuale con accento ogni 5 anni.
+1. **Strangeness s(t)** between 0 and 1: `r = submissions / baseline`, `s = clip((r − threshold) / saturation)^γ`, interpolated between years and smoothed (¼ year).
+2. **Note**: a sum of N harmonic partials with amplitudes `k^−2.2`.
+3. **Effects**, each with amount `depth × s(t)`, in the order they are computed:
+   detune → jitter → inharmonicity → spectral tilt → wavefolding.
+4. **Ghost voice**: the starting note with no effects, added after wavefolding.
+5. **Mix**: a chord of ICSE 110 Hz, FSE 165 Hz, ASE 220 Hz (a just fifth and an octave), stereo panning, and a yearly beat with an accent every 5 years.
 
-## Uso
+## Usage
 
-Generare i WAV con le impostazioni predefinite (accordo e tre conferenze singole):
-
-```bash
-python3 sonify.py --tutte
-```
-
-Con le impostazioni esportate dal tool:
+Render the WAV files with the default settings (the chord and each conference on its own):
 
 ```bash
-python3 sonify.py impostazioni.json --tutte
+python3 sonify.py --all
 ```
 
-Preparare le pagine da pubblicare:
+With settings exported from the tool:
+
+```bash
+python3 sonify.py settings.json --all
+```
+
+Package the pages for publishing:
 
 ```bash
 ./build.sh dist
 ```
 
-## Fonti dei dati
+## Data sources
 
 - [emeryberger/csconferences](https://github.com/emeryberger/csconferences)
 - FSE 2006–2010: [Tao Xie, SE conference statistics](https://taoxie.cs.illinois.edu/seconferences.htm)
