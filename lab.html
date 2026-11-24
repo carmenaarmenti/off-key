@@ -79,6 +79,10 @@ details.group > summary:hover { color: var(--ink); }
 .val { font: 500 0.82rem var(--font-mono); color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .help { font-size: 0.78rem; color: var(--muted); margin: 0; max-width: 70ch; }
 body:not(.explain) .help { display: none; }
+.ctl.open > .help, .fx.open > .help { display: block; background: var(--bg); border-radius: 8px; padding: 8px 10px; color: var(--ink); }
+.lbl { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.info { width: 18px; height: 18px; padding: 0; border-radius: 50%; flex: none; display: inline-grid; place-items: center; font: 600 0.66rem/1 var(--font-mono); color: var(--muted); background: var(--bg); }
+.info[aria-expanded="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 20px; background: transparent; margin: 0; cursor: pointer; }
 input[type="range"]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: var(--line); }
 input[type="range"]::-moz-range-track { height: 4px; border-radius: 2px; background: var(--line); }
@@ -174,7 +178,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-v
       <h1>Submissions in Sound</h1>
       <p>ICSE, FSE and ASE, 2006–2025. Each conference is a note that warps as its submissions drift away from their historical baseline.</p>
     </div>
-    <button type="button" class="explain-toggle" id="explain" aria-pressed="false">Show explanations</button>
+    <button type="button" class="explain-toggle" id="explain" aria-pressed="false">Show all explanations</button>
   </header>
 
   <div class="layout">
@@ -483,15 +487,15 @@ let actx = null, srcNode = null, playing = false, startAt = 0, offset = 0, loopO
 
 const FX_INFO = {
   detune: { label: "Detune", min: 0, max: 200, step: 5, fmt: v => `${v} cent`,
-    help: "Shifts the pitch of the note away from its starting pitch (100 cents = one semitone). The difference from the ghost voice, or from the other notes, produces beats." },
+    help: "Shifts the whole note away from its starting pitch by depth × s cents (100 cents = one semitone). In the chord ICSE moves down while FSE and ASE move up, so the notes drift apart and beat against the ghost voice and each other. Depth: the shift at s = 1." },
   jitter: { label: "Jitter", min: 0, max: 60, step: 1, fmt: v => `±${v} cent`,
-    help: "Adds a continuous random deviation to the pitch, so the note never settles." },
+    help: "Adds a continuous random wobble to the pitch (noise smoothed over about 30 ms), scaled by depth × s. The note never settles and its beats keep changing speed. Depth: the largest wobble at s = 1, in cents." },
   inharm: { label: "Inharmonicity", min: 0, max: 6, step: 0.1, fmt: v => `B = ${v.toFixed(1)}‰`,
-    help: "Moves the partials off the exact multiples of the fundamental. The sound loses a clear pitch. In the spectrogram the ridges bend upwards." },
+    help: "Moves each partial k above its harmonic position: f_k = k · f · √(1 + B · s · k²), the model of a stiff string. High partials move most, so the note loses a clear pitch and turns metallic; in the spectrogram the ridges bend upwards. Depth: the coefficient B at s = 1." },
   bright: { label: "Spectral tilt", min: 0, max: 2, step: 0.05, fmt: v => `${(-6.02 * (2.2 - v)).toFixed(1)} dB/oct`,
-    help: "Changes the balance between low and high partials: higher values make the high partials louder. The value is the spectral slope at full strangeness (starting slope: −13.2 dB/oct)." },
+    help: "Flattens the spectrum so high partials get louder: amplitudes k^−(2.2 − T · s). The sound gets brighter without changing pitch. Depth: T; the value shown is the spectral slope at s = 1 (the starting slope is −13.2 dB/oct)." },
   fold:   { label: "Wavefolding", min: 0, max: 10, step: 0.5, fmt: v => `gain ×${(1 + v).toFixed(1)}`,
-    help: "Amplifies the waveform and folds it back on itself when it exceeds the limit. Many new partials appear and the sound becomes rougher." }
+    help: "Amplifies the waveform by 1 + G · s and folds back whatever exceeds the limit instead of clipping it. This adds new partials (harmonics and intermodulation) and roughens the sound. The ghost voice is added afterwards, so it stays clean. Depth: G; the value shown is the gain at s = 1." }
 };
 
 // ---------- control panel ----------
@@ -505,6 +509,16 @@ const el = (tag, attrs = {}, children = []) => {
   return e;
 };
 const updaters = [];
+// info button: shows or hides the explanation of one parameter
+function infoBtn(label) {
+  const b = el("button", { type: "button", class: "info", "aria-label": `About ${label}`, "aria-expanded": "false", text: "i" });
+  b.addEventListener("click", () => {
+    const box = b.closest(".ctl, .fx"), open = !box.classList.contains("open");
+    box.classList.toggle("open", open); b.setAttribute("aria-expanded", String(open));
+  });
+  return b;
+}
+const lbl = (label, labelEl, help) => el("div", { class: "lbl" }, [labelEl, help ? infoBtn(label) : null]);
 function slider({ id, label, min, max, step, get, set, fmt, help, kind = "render" }) {
   const val = el("span", { class: "val" });
   const input = el("input", { type: "range", id, min, max, step });
@@ -513,7 +527,7 @@ function slider({ id, label, min, max, step, get, set, fmt, help, kind = "render
   input.addEventListener("input", () => { set(parseFloat(input.value)); val.textContent = fmt(get()); schedule(kind); });
   updaters.push(sync); sync();
   return el("div", { class: "ctl" }, [
-    el("div", { class: "ctl-head" }, [el("label", { for: id, text: label }), val]),
+    el("div", { class: "ctl-head" }, [lbl(label, el("label", { for: id, text: label }), help), val]),
     input, help ? el("p", { class: "help", text: help }) : null
   ]);
 }
@@ -527,12 +541,22 @@ function segmented(id, label, options, get, set) {
   updaters.push(sync); sync();
   return wrap;
 }
-function checkbox(id, label, get, set) {
+// a labelled group of choices, with its explanation
+function choice(id, label, options, get, set, help) {
+  return el("div", { class: "ctl" }, [
+    el("div", { class: "ctl-head" }, [lbl(label, el("span", { text: label }), help)]),
+    segmented(id, label, options, get, set), el("p", { class: "help", text: help })
+  ]);
+}
+function checkbox(id, label, get, set, help) {
   const input = el("input", { type: "checkbox", id });
   input.checked = get();
   input.addEventListener("change", () => { set(input.checked); });
   updaters.push(() => { input.checked = get(); });
-  return el("label", { class: "check", for: id }, [input, label]);
+  return el("div", { class: "ctl" }, [
+    el("div", { class: "ctl-head" }, [lbl(label, el("label", { class: "check", for: id }, [input, label]), help)]),
+    help ? el("p", { class: "help", text: help }) : null
+  ]);
 }
 // collapsible section: its content goes in .group-body
 function section(title, kids, open = false) {
@@ -540,12 +564,12 @@ function section(title, kids, open = false) {
   d.open = open;
   return d;
 }
-// explanations hidden by default, remembered in the viewer's browser
+// "Show explanations" opens every explanation at once; it is remembered in the viewer's browser
 const explainBtn = document.getElementById("explain");
 function setExplain(on) {
   document.body.classList.toggle("explain", on);
   explainBtn.setAttribute("aria-pressed", String(on));
-  explainBtn.textContent = on ? "Hide explanations" : "Show explanations";
+  explainBtn.textContent = on ? "Hide all explanations" : "Show all explanations";
   try { localStorage.setItem("lab-explain", on ? "1" : "0"); } catch (e) {}
 }
 explainBtn.addEventListener("click", () => setExplain(!document.body.classList.contains("explain")));
@@ -555,39 +579,40 @@ setExplain(explainSaved);
 
 controls.append(
   section("Listening", [
-    el("div", { class: "ctl" }, [el("label", { text: "What to play" }),
-      segmented("mode", "What to play", [["chord", "Chord"], ["ICSE", "ICSE"], ["FSE", "FSE"], ["ASE", "ASE"]], () => P.mode, v => { P.mode = v; schedule("render"); })]),
-    el("p", { class: "help", text: "Chord: the three conferences play together, ICSE on A2 (110 Hz), FSE on E3 (165 Hz, a just fifth 3:2, no initial beating), ASE on A3 (220 Hz). Single: one conference, on the note chosen under Voices, with its ghost voice." }),
-    el("div", { class: "ctl" }, [el("label", { text: "Strangeness source" }),
-      segmented("source", "Source", [["data", "Real data"], ["ramp", "Ramp 0 → 1"]], () => P.source, v => { P.source = v; schedule("render"); })]),
-    el("p", { class: "help", text: "Real data: strangeness follows the submissions. Ramp: strangeness rises linearly from 0 to 1, regardless of the data. Use Solo to hear one effect at a time." }),
-    checkbox("loop", "Loop", () => loopOn, v => { loopOn = v; if (srcNode) srcNode.loop = v; })
+    choice("mode", "What to play", [["chord", "Chord"], ["ICSE", "ICSE"], ["FSE", "FSE"], ["ASE", "ASE"]], () => P.mode, v => { P.mode = v; schedule("render"); },
+      "Chooses what you hear. Chord: the three conferences together, ICSE on A2 (110 Hz, left), FSE on E3 (165 Hz, centre, a just fifth above ICSE) and ASE on A3 (220 Hz, right). ICSE, FSE or ASE: that conference alone, on the note set under Voices, next to its ghost voice."),
+    choice("source", "Strangeness source", [["data", "Real data"], ["ramp", "Ramp 0 → 1"]], () => P.source, v => { P.source = v; schedule("render"); },
+      "Where strangeness s comes from. Real data: s is computed from each year's submissions. Ramp: s rises linearly from 0 to 1 over the piece, ignoring the data; combine it with Solo to hear what a single effect does."),
+    checkbox("loop", "Loop", () => loopOn, v => { loopOn = v; if (srcNode) srcNode.loop = v; },
+      "Starts the piece again from the beginning when it ends.")
   ], true),
   section("Time and beat", [
-    slider({ id: "spy", label: "Length of a year", min: 0.4, max: 2, step: 0.05, get: () => P.secPerYear, set: v => P.secPerYear = v, fmt: v => `${v.toFixed(2)} s` }),
+    slider({ id: "spy", label: "Length of a year", min: 0.4, max: 2, step: 0.05, get: () => P.secPerYear, set: v => P.secPerYear = v, fmt: v => `${v.toFixed(2)} s`,
+      help: "How many seconds each year lasts; the piece lasts 20 times this value. Longer years give each change more time to be heard." }),
     slider({ id: "beat", label: "Beat volume", min: 0, max: 1, step: 0.05, get: () => P.beat, set: v => P.beat = v, fmt: v => v === 0 ? "off" : `${Math.round(v * 100)}%`,
-      help: "A percussive click at the start of each year, to follow the passage of time." }),
-    checkbox("accent", "Accent every 5 years (2010, 2015, 2020, 2025)", () => P.beatAccent, v => { P.beatAccent = v; schedule("render"); })
+      help: "Volume of the click at the start of each year (two short damped sines, 1250 and 2780 Hz). It marks time and carries no data. At 0 it is off." }),
+    checkbox("accent", "Accent every 5 years", () => P.beatAccent, v => { P.beatAccent = v; schedule("render"); },
+      "Adds a low 62 Hz thump to the beat in 2010, 2015, 2020 and 2025, to help you find your place in time.")
   ]),
   section("From data to strangeness", [
     slider({ id: "thr", label: "Threshold", min: 1, max: 2, step: 0.05, get: () => P.threshold, set: v => P.threshold = v, fmt: v => `${v.toFixed(2)}× baseline`,
-      help: "Below this value strangeness stays at 0. The baseline is the median of each conference's 2006–2015 submissions." }),
+      help: "Strangeness starts above this multiple of the baseline, the median of the conference's 2006–2015 submissions. Below it, variation from year to year counts as normal and s stays at 0. For example, 1.25 means 25% above the baseline." }),
     slider({ id: "sat", label: "Saturation", min: 0.3, max: 3, step: 0.05, get: () => P.saturate, set: v => P.saturate = v, fmt: v => `max at ${(P.threshold + v).toFixed(2)}×`,
-      help: "How far above the baseline strangeness reaches 1. On the shared scale it is the same for all three conferences." }),
-    el("div", { class: "ctl" }, [el("label", { text: "Saturation scale (single conferences)" }),
-      segmented("satMode", "Saturation scale", [["common", "Shared"], ["own", "Per conference"]], () => P.satMode, v => { P.satMode = v; if (P.mode !== "chord") schedule("render"); })]),
-    el("p", { class: "help", text: "Per conference: strangeness reaches 1 in that conference's peak year, and the Saturation slider is not used. The Chord always uses the shared scale." }),
+      help: "How far above the threshold strangeness reaches 1: s = (submissions / baseline − threshold) / saturation, capped at 1. Lower values make the sound break sooner. Not used with the per-conference scale." }),
+    choice("satMode", "Saturation scale", [["common", "Shared"], ["own", "Per conference"]], () => P.satMode, v => { P.satMode = v; if (P.mode !== "chord") schedule("render"); },
+      "Applies only to a single conference. Shared: the same saturation for every conference, so their strangeness can be compared. Per conference: s reaches 1 in that conference's peak year, so each one uses its full range. The Chord always uses the shared scale."),
     slider({ id: "gamma", label: "Exponent (gamma)", min: 0.5, max: 3, step: 0.05, get: () => P.gamma, set: v => P.gamma = v, fmt: v => v.toFixed(2),
-      help: "Curve applied to strangeness. Values above 1 damp small deviations and keep large ones." })
+      help: "Strangeness is raised to this power: s = s^γ. Values above 1 shrink small values more than large ones (0.3 becomes 0.21 at γ = 1.3), so the past stays quiet and the recent jump stands out. Values below 1 do the opposite." })
   ]),
   section("Voices", [
     slider({ id: "ghost", label: "Ghost voice", min: 0, max: 1, step: 0.05, get: () => P.ghost, set: v => P.ghost = v, fmt: v => v === 0 ? "off" : `${Math.round(v * 100)}%`,
-      help: "A copy of the same note, with no effects and a fixed pitch for all 20 years. It is the reference that makes audible how far the note has moved." }),
-    el("div", { class: "ctl" }, [el("label", { text: "Note for a single conference" }),
-      segmented("base", "Note", Object.entries(NOTES).map(([f, n]) => [parseFloat(f), n]), () => P.baseFreq, v => { P.baseFreq = v; if (P.mode !== "chord") schedule("render"); })]),
-    checkbox("breath", "Slow breathing (0.11 Hz volume swell, not tied to the data)", () => P.breath, v => { P.breath = v; schedule("render"); }),
+      help: "Volume of the reference note: the same note with no effects and a fixed pitch for the whole piece. Detune and inharmonicity are heard against it, so turning it off makes them harder to notice." }),
+    choice("base", "Note for a single conference", Object.entries(NOTES).map(([f, n]) => [parseFloat(f), n]), () => P.baseFreq, v => { P.baseFreq = v; if (P.mode !== "chord") schedule("render"); },
+      "The fundamental used when one conference plays alone. The chord always uses A2, E3 and A3."),
+    checkbox("breath", "Slow breathing", () => P.breath, v => { P.breath = v; schedule("render"); },
+      "An optional volume swell at 0.11 Hz. It is not tied to the data and adds ripples to the spectrogram, so it is off by default."),
     slider({ id: "partials", label: "Partials", min: 8, max: 40, step: 1, get: () => P.partials, set: v => P.partials = v, fmt: v => `${v}`,
-      help: "Number of sine components that make up each note." })
+      help: "How many sine components make up each note, with amplitudes k^−2.2. More partials give a fuller sound and give inharmonicity, spectral tilt and wavefolding more material to act on." })
   ])
 );
 
@@ -609,18 +634,18 @@ for (const [key, info] of Object.entries(FX_INFO)) {
     get: () => P.fx[key].amt, set: v => P.fx[key].amt = v, fmt: info.fmt });
   const range = s.querySelector("input");
   updaters.push(() => { cb.checked = P.fx[key].on; box.classList.toggle("off", !P.fx[key].on); range.disabled = !P.fx[key].on; });
-  box.append(el("div", { class: "fx-head" }, [el("label", { for: `fx-${key}` }, [cb, info.label]), solo]), s, el("p", { class: "help", text: info.help }));
+  box.append(el("div", { class: "fx-head" }, [el("label", { for: `fx-${key}` }, [cb, info.label]), infoBtn(info.label), solo]), s,
+    el("p", { class: "help", text: info.help + " The checkbox turns the effect on or off; Solo keeps only this effect on." }));
   fxBody.append(box);
 }
 controls.append(fxSection);
 controls.append(section("Spectrogram", [
-  el("div", { class: "ctl" }, [el("label", { text: "Frequency scale" }),
-    segmented("fscale", "Frequency scale", [[false, "Linear"], [true, "Logarithmic"]], () => P.view.logFreq, v => { P.view.logFreq = v; buildAxes(); schedule("spec"); })]),
-  el("p", { class: "help", text: "Linear: every hertz takes the same space, the scale that shows inharmonicity best. Logarithmic: every octave takes the same space." }),
+  choice("fscale", "Frequency scale", [[false, "Linear"], [true, "Logarithmic"]], () => P.view.logFreq, v => { P.view.logFreq = v; buildAxes(); schedule("spec"); },
+    "How frequencies are laid out in the spectrogram. Linear: every hertz takes the same space, which shows inharmonicity best. Logarithmic: every octave takes the same space, closer to how we hear pitch."),
   slider({ id: "fmax", label: "Maximum frequency", min: 1000, max: 12000, step: 500, get: () => P.view.fmax, set: v => { P.view.fmax = v; buildAxes(); }, fmt: v => `${(v / 1000).toLocaleString("en-US")} kHz`, kind: "spec",
-    help: "Upper limit of the frequency axis." }),
+    help: "Upper limit of the spectrogram's frequency axis. Lower it to zoom in on the fundamentals; raise it to see high partials and wavefolding products. It changes the picture, not the sound." }),
   slider({ id: "dbr", label: "Dynamic range", min: 30, max: 110, step: 5, get: () => P.view.dbRange, set: v => P.view.dbRange = v, fmt: v => `${v} dB`, kind: "mesh",
-    help: "Intensity range shown, from the maximum down. Higher values reveal weaker components too." })
+    help: "How many decibels below the loudest component are shown. Higher values reveal weak components such as wavefolding products; lower values show only the strongest partials. It changes the picture, not the sound." })
 ]));
 function syncAll() { updaters.forEach(f => f()); }
 syncAll();
