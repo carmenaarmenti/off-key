@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<title>Anatomia della Stranezza</title>
+<title>Anatomy of Strangeness</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
@@ -155,16 +155,16 @@ button:focus-visible, input:focus-visible, a:focus-visible, summary:focus-visibl
 <div class="app">
   <header class="top">
     <div class="top-row">
-      <span class="mark">Anatomia della Stranezza</span>
+      <span class="mark">Anatomy of Strangeness</span>
       <span class="step-name" id="stepName"></span>
     </div>
-    <nav class="progress" id="progress" aria-label="Passi del tutorial"></nav>
+    <nav class="progress" id="progress" aria-label="Tutorial steps"></nav>
   </header>
   <main class="slide" id="slide" tabindex="-1"></main>
   <footer class="bottom">
-    <button type="button" class="btn" id="prev">Indietro</button>
+    <button type="button" class="btn" id="prev">Back</button>
     <span class="now" id="now" aria-live="polite"></span>
-    <button type="button" class="btn primary" id="next">Ho capito</button>
+    <button type="button" class="btn primary" id="next">Got it</button>
   </footer>
 </div>
 
@@ -293,7 +293,7 @@ self.onmessage = e => {
 <script>
 (function () {
 "use strict";
-// ---------------- dati e valori predefiniti (uguali a lab.html) ----------------
+// ---------------- data and defaults (same as lab.html) ----------------
 const YEARS = []; for (let y = 2006; y <= 2025; y++) YEARS.push(y);
 const DATA = {
   ICSE: [395,334,371,405,380,441,408,461,496,452,530,415,502,529,617,615,691,780,1049,1150],
@@ -305,7 +305,7 @@ const CHORD = { ICSE: { f0: 110, pan: -0.7, dir: -1 }, FSE: { f0: 165, pan: 0, d
 const DEF = { sr: 44100, partials: 28, f0: 220, ghost: 0.35, threshold: 1.25, saturate: 1.4, gamma: 1.3, spy: 1, beat: 0.5, accent: true, breath: false,
   fx: { detune: 90, jitter: 20, inharm: 2.5, bright: 1.2, fold: 5 } };
 const NOFX = { detune: 0, jitter: 0, inharm: 0, bright: 0, fold: 0 };
-const NOTES = [[110, "La2"], [146.83, "Re3"], [220, "La3"], [293.66, "Re4"]];
+const NOTES = [[110, "A2"], [146.83, "D3"], [220, "A3"], [293.66, "D4"]];
 const median = a => { const s = a.slice().sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
 const normOf = name => median(DATA[name].slice(0, 10));
 function sLinear(name, o) {
@@ -315,7 +315,7 @@ function sLinear(name, o) {
 }
 const COMMON = { threshold: DEF.threshold, saturate: DEF.saturate, satMode: "common" };
 const sYear = (name, i) => Math.pow(sLinear(name, COMMON)[i], DEF.gamma);
-const fmtN = (v, d = 2) => v.toLocaleString("it-IT", { minimumFractionDigits: d, maximumFractionDigits: d });
+const fmtN = (v, d = 2) => v.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
 const sign = v => (v >= 0 ? "+" : "−") + Math.abs(v);
 
 // ---------------- DOM ----------------
@@ -354,14 +354,14 @@ function toggle(parent, label, value, onChange) {
   parent.append(b); return b;
 }
 function options(parent, build) {
-  const d = el("details", { class: "opts" }, [el("summary", { text: "Altre impostazioni" })]);
+  const d = el("details", { class: "opts" }, [el("summary", { text: "More settings" })]);
   const k = el("div", { class: "knobs" }); d.append(k); build(k); parent.append(d);
 }
 function stats(parent) {
   const box = el("div", { class: "stats" }); parent.append(box);
   return list => { box.textContent = ""; for (const [v, l] of list) box.append(el("div", { class: "stat" }, [el("b", { text: v }), el("span", { text: l })])); };
 }
-// pulsante principale di ascolto + scelte rapide
+// main listening button plus quick choices
 function listen(parent, main, others = []) {
   const row = el("div", { class: "listen" });
   const mb = el("button", { type: "button", class: "play" }, [el("i", { "aria-hidden": "true" }), main.label]);
@@ -370,7 +370,7 @@ function listen(parent, main, others = []) {
   if (others.length) { const c = el("div", { class: "chips" }); for (const o of others) { const b = el("button", { type: "button", class: "chip", text: o.label }); b.addEventListener("click", () => o.run(b)); c.append(b); } row.append(c); }
   parent.append(row);
 }
-// grafico su canvas, ridisegnato al cambio di dimensioni
+// canvas chart, redrawn on resize
 function plot(parent, height, draw) {
   const cv = el("canvas", { class: "plot", role: "img" }); cv.style.height = height + "px"; parent.append(cv);
   const ctx = cv.getContext("2d");
@@ -395,7 +395,7 @@ function axes(ctx, w, h, o) {
 }
 const line = (ctx, pts, color, width = 2, dash = []) => { ctx.strokeStyle = color; ctx.lineWidth = width; ctx.setLineDash(dash); ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke(); ctx.setLineDash([]); ctx.lineWidth = 1; };
 
-// ---------------- sintesi e riproduzione ----------------
+// ---------------- synthesis and playback ----------------
 const worker = new Worker(URL.createObjectURL(new Blob([document.getElementById("engine").textContent], { type: "text/javascript" })));
 let jobSeq = 0; const pending = new Map();
 worker.onmessage = e => { const r = pending.get(e.data.id); pending.delete(e.data.id); if (r) r(e.data); };
@@ -412,12 +412,12 @@ function stopAudio() {
   if (activeBtn) { activeBtn.classList.remove("on"); activeBtn = null; }
   if (onProg) { const f = onProg; onProg = null; f(null); }
 }
-// btn: il pulsante premuto (premuto di nuovo ferma l'audio)
+// btn: the button pressed (pressing it again stops the audio)
 async function playJobs(btn, jobs, label, progress) {
   if (btn && btn === activeBtn) { stopAudio(); return; }
   if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
   actx.resume(); stopAudio();
-  const my = token; activeBtn = btn; if (btn) btn.classList.add("on"); nowEl.textContent = "calcolo…";
+  const my = token; activeBtn = btn; if (btn) btn.classList.add("on"); nowEl.textContent = "computing…";
   const clips = await Promise.all(jobs.map(synth));
   if (my !== token) return;
   const sr = clips[0].sr, gap = Math.round(0.4 * sr);
@@ -438,7 +438,7 @@ async function playJobs(btn, jobs, label, progress) {
   raf = requestAnimationFrame(tick);
 }
 
-// ---------------- modello: parziali, forma d'onda, spettro ----------------
+// ---------------- model: partials, waveform, spectrum ----------------
 const PHASE = k => (k * 2.399963) % (2 * Math.PI);
 function partialsOf(o) {
   const fx = Object.assign({}, NOFX, o.fx), s = o.s || 0;
@@ -503,41 +503,41 @@ function sContinuous(vals, gamma, P = 50) {
   return s.map(v => Math.pow(Math.max(0, v), gamma));
 }
 
-// ---------------- slide ----------------
+// ---------------- slides ----------------
 const SLIDES = [];
 const addSlide = d => SLIDES.push(d);
 
 addSlide({
-  id: "inizio", label: "Introduzione", eyebrow: "Introduzione",
-  title: "Un numero che deforma un suono",
-  lead: "Le sottomissioni a ICSE, FSE e ASE diventano un solo valore, la stranezza s, che fa girare insieme tutte le manopole di una catena di effetti.",
-  formula: ["effetto(t) = profondità × s(t)"],
-  hear: "Con s = 0 la nota resta pulita. Più i dati si allontanano dal passato, più gli effetti agiscono insieme.",
-  more: `<p>Ogni passo aggiunge un anello alla catena, nell'ordine in cui il programma lo calcola. A destra trovi un esperimento con <b>un solo effetto attivo</b> su una nota: muovi s, ascolta la rampa da 0 a 1 e confronta la nota pulita con quella trasformata.</p>
-    <p>Quando l'effetto ti è chiaro premi «Ho capito». Puoi tornare a qualunque passo dalla barra in alto o con i tasti ← e →.</p>`,
+  id: "start", label: "Introduction", eyebrow: "Introduction",
+  title: "A number that warps a sound",
+  lead: "Submissions to ICSE, FSE and ASE become a single value, strangeness s, which turns every knob in a chain of effects at once.",
+  formula: ["effect(t) = depth × s(t)"],
+  hear: "At s = 0 the note stays clean. The further the data drift from the past, the more all the effects act together.",
+  more: `<p>Each step adds one link to the chain, in the order the program computes it. On the right is an experiment with <b>a single effect active</b> on one note: move s, play the ramp from 0 to 1, and compare the clean note with the transformed one.</p>
+    <p>When an effect is clear, press "Got it". You can return to any step from the bar at the top or with the ← and → keys.</p>`,
   build(t) {
-    const steps = [["Sottomissioni", "20 valori per conferenza", ""], ["Stranezza s(t)", "da 0 a 1", ""], ["Nota", "somma di parziali", ""],
-      ["Detune", "altezza", "× s"], ["Jitter", "altezza", "× s"], ["Inarmonicità", "posizione delle parziali", "× s"], ["Spectral tilt", "ampiezza delle parziali", "× s"],
-      ["Wavefolding", "forma d'onda", "× s"], ["Voce fantasma", "riferimento fisso", ""], ["Accordo e beat", "mix e tempo", ""]];
+    const steps = [["Submissions", "20 values per conference", ""], ["Strangeness s(t)", "from 0 to 1", ""], ["Note", "sum of partials", ""],
+      ["Detune", "pitch", "× s"], ["Jitter", "pitch", "× s"], ["Inharmonicity", "partial positions", "× s"], ["Spectral tilt", "partial amplitudes", "× s"],
+      ["Wavefolding", "waveform", "× s"], ["Ghost voice", "fixed reference", ""], ["Chord and beat", "mix and time", ""]];
     t.append(el("ol", { class: "chain" }, steps.map(([a, b, c]) => el("li", { class: c ? "fx" : "" }, [el("div", {}, [el("b", { text: a }), el("br"), el("small", { text: b })]), c ? el("em", { text: c }) : el("span")]))));
-    listen(t, { label: "Ascolta il risultato finale", run: b => playJobs(b, [fullPieceJob()], "brano completo · 20 anni") });
+    listen(t, { label: "Hear the final result", run: b => playJobs(b, [fullPieceJob()], "full piece · 20 years") });
   }
 });
 
 addSlide({
-  id: "dato", label: "Dati → s", eyebrow: "Passo 1 · Stranezza",
-  title: "Dalle sottomissioni alla stranezza",
-  lead: "Ogni anno viene confrontato con il passato della sua conferenza. Sotto la soglia s vale 0, alla saturazione vale 1.",
-  formula: ["r = sottomissioni / norma", "s = clip((r − soglia) / saturazione) ^ γ"],
-  hear: "L'anteprima fa sentire la conferenza scelta con tutti gli effetti: è dove arriveremo.",
-  more: `<p><b>Norma</b>: mediana 2006–2015 (ICSE 406,5 · FSE 210 · ASE 253). Gli anni successivi non entrano nel calcolo, altrimenti la crescita alzerebbe il riferimento. La mediana non è spostata dai picchi isolati.</p>
-    <p><b>Soglia</b>: sotto, la variazione è considerata fisiologica e s = 0. <b>Saturazione</b>: distanza oltre la soglia a cui s = 1. Con la scala comune è uguale per tutte le conferenze; con la scala per conferenza s = 1 nell'anno di picco.</p>
-    <p><b>γ</b>: con γ &gt; 1 i valori piccoli si riducono più dei grandi (0,3<sup>1,3</sup> = 0,21; 0,8<sup>1,3</sup> = 0,75), così il passato resta quieto.</p>
-    <p>Per ottenere un segnale continuo, s viene interpolata tra i centri degli anni e smussata (passo «Tempo»).</p>`,
+  id: "data", label: "Data → s", eyebrow: "Step 1 · Strangeness",
+  title: "From submissions to strangeness",
+  lead: "Each year is compared with its conference's own past. Below the threshold s is 0; at saturation it is 1.",
+  formula: ["r = submissions / baseline", "s = clip((r − threshold) / saturation) ^ γ"],
+  hear: "The preview plays the chosen conference with every effect on: this is where we are heading.",
+  more: `<p><b>Baseline</b>: the 2006–2015 median (ICSE 406.5 · FSE 210 · ASE 253). Later years are left out, otherwise the growth would raise the reference itself. The median is not pulled by isolated spikes.</p>
+    <p><b>Threshold</b>: below it, variation counts as normal and s = 0. <b>Saturation</b>: the distance above the threshold at which s = 1. On the shared scale it is the same for every conference; on the per-conference scale s = 1 in the conference's peak year.</p>
+    <p><b>γ</b>: with γ &gt; 1 small values shrink more than large ones (0.3<sup>1.3</sup> = 0.21; 0.8<sup>1.3</sup> = 0.75), so the past stays quiet.</p>
+    <p>To get a continuous signal, s is interpolated between year centres and smoothed (see "Time").</p>`,
   build(t) {
     const o = { name: "ICSE", threshold: DEF.threshold, saturate: DEF.saturate, satMode: "common", gamma: DEF.gamma };
     let ph = null;
-    chips(t, { label: "Conferenza", options: NAMES.map(n => [n, n]), value: o.name, onChange: v => { o.name = v; redraw(); } });
+    chips(t, { label: "Conference", options: NAMES.map(n => [n, n]), value: o.name, onChange: v => { o.name = v; redraw(); } });
     const ch = plot(t, 260, (ctx, w, h) => {
       const norm = normOf(o.name), r = DATA[o.name].map(x => x / norm), sl = sLinear(o.name, o);
       const satTop = o.satMode === "own" ? Math.max(...r) : o.threshold + o.saturate, ymax = Math.ceil(Math.max(3, ...r, satTop) + 0.3);
@@ -546,8 +546,8 @@ addSlide({
       r.forEach((v, i) => { ctx.globalAlpha = sl[i] > 0 ? 1 : 0.28; ctx.fillStyle = col; ctx.beginPath(); ctx.roundRect(a.X(i) - bw / 2, a.Y(v), bw, a.Y(0) - a.Y(v), [3, 3, 0, 0]); ctx.fill(); });
       ctx.globalAlpha = 1;
       const hl = (v, label) => { line(ctx, [[a.m.l, a.Y(v)], [w - a.m.r, a.Y(v)]], css("--ink"), 1, [4, 4]); ctx.fillStyle = css("--ink"); ctx.textAlign = "left"; ctx.textBaseline = "bottom"; ctx.font = `11px ${css("--font-mono")}`; ctx.fillText(label, a.m.l + 4, a.Y(v) - 3); };
-      hl(o.threshold, "soglia · s = 0"); hl(satTop, "s = 1");
-      // striscia della stranezza: un quadrato per anno, intensità = s
+      hl(o.threshold, "threshold · s = 0"); hl(satTop, "s = 1");
+      // strangeness strip: one square per year, opacity = s
       const yS = h - 16;
       sl.forEach((v, i) => { const s = Math.pow(v, o.gamma); ctx.fillStyle = css("--accent"); ctx.globalAlpha = 0.08 + 0.92 * s; ctx.beginPath(); ctx.roundRect(a.X(i) - bw / 2, yS, bw, 10, 2); ctx.fill(); });
       ctx.globalAlpha = 1; ctx.fillStyle = css("--muted"); ctx.textAlign = "right"; ctx.textBaseline = "middle"; ctx.fillText("s", a.m.l - 8, yS + 5);
@@ -555,48 +555,48 @@ addSlide({
     });
     const st = stats(t);
     const k = el("div", { class: "knobs" }); t.append(k);
-    knob(k, { label: "Soglia", min: 1, max: 2, step: 0.05, value: o.threshold, fmt: v => fmtN(v) + "×", onInput: v => { o.threshold = v; redraw(); } });
-    const sat = knob(k, { label: "Saturazione", min: 0.3, max: 3, step: 0.05, value: o.saturate, fmt: v => "+" + fmtN(v), onInput: v => { o.saturate = v; redraw(); } });
-    knob(k, { label: "Esponente γ", min: 0.5, max: 3, step: 0.05, value: o.gamma, fmt: v => fmtN(v), onInput: v => { o.gamma = v; redraw(); } });
-    options(t, b => chips(b, { title: "Scala della saturazione", label: "Scala", options: [["common", "Comune"], ["own", "Per conferenza"]], value: o.satMode, onChange: v => { o.satMode = v; redraw(); } }));
+    knob(k, { label: "Threshold", min: 1, max: 2, step: 0.05, value: o.threshold, fmt: v => fmtN(v) + "×", onInput: v => { o.threshold = v; redraw(); } });
+    const sat = knob(k, { label: "Saturation", min: 0.3, max: 3, step: 0.05, value: o.saturate, fmt: v => "+" + fmtN(v), onInput: v => { o.saturate = v; redraw(); } });
+    knob(k, { label: "Exponent γ", min: 0.5, max: 3, step: 0.05, value: o.gamma, fmt: v => fmtN(v), onInput: v => { o.gamma = v; redraw(); } });
+    options(t, b => chips(b, { title: "Saturation scale", label: "Scale", options: [["common", "Shared"], ["own", "Per conference"]], value: o.satMode, onChange: v => { o.satMode = v; redraw(); } }));
     function redraw() {
       sat.input.disabled = o.satMode === "own"; ch.redraw();
       const sl = sLinear(o.name, o), norm = normOf(o.name);
-      st([[fmtN(norm, 1), "norma 2006–2015"], [String(Math.round(norm * o.threshold)), "sottomissioni per s > 0"], [fmtN(Math.pow(sl[19], o.gamma)), "s nel 2025"]]);
+      st([[fmtN(norm, 1), "2006–2015 baseline"], [String(Math.round(norm * o.threshold)), "submissions for s > 0"], [fmtN(Math.pow(sl[19], o.gamma)), "s in 2025"]]);
     }
     redraw();
-    listen(t, { label: "Anteprima: 20 anni", run: b => playJobs(b, [{ dur: 20, partials: DEF.partials, fx: DEF.fx, beat: { vol: DEF.beat, accent: true, spy: 1 },
-      voices: [voice({ ghost: DEF.ghost, s: { type: "curve", values: sLinear(o.name, o), spy: 1, gamma: o.gamma } })] }], `${o.name} · 20 anni`, p => { ph = p ? p.t / 20 : null; ch.redraw(); }) });
+    listen(t, { label: "Preview: 20 years", run: b => playJobs(b, [{ dur: 20, partials: DEF.partials, fx: DEF.fx, beat: { vol: DEF.beat, accent: true, spy: 1 },
+      voices: [voice({ ghost: DEF.ghost, s: { type: "curve", values: sLinear(o.name, o), spy: 1, gamma: o.gamma } })] }], `${o.name} · 20 years`, p => { ph = p ? p.t / 20 : null; ch.redraw(); }) });
   }
 });
 
 addSlide({
-  id: "nota", label: "Nota", eyebrow: "Passo 2 · Sorgente",
-  title: "Una nota è una somma di parziali",
-  lead: "La nota di partenza è armonica: le parziali stanno a multipli interi della fondamentale, e l'orecchio le fonde in un'unica altezza.",
-  formula: ["x(t) = Σₖ k^−2,2 · sin(2π · k · f₀ · t + φₖ)"],
-  hear: "Aggiungendo parziali il timbro si riempie, ma l'altezza resta la stessa.",
-  more: `<p>Ogni suono periodico è una somma di sinusoidi (serie di Fourier). Ogni sinusoide è una <b>parziale</b>; lo <b>spettro</b> mostra l'ampiezza di ognuna. Le parziali armoniche (fₖ = k · f₀) si fondono in una nota di altezza f₀; il loro numero e le loro ampiezze definiscono il <b>timbro</b>.</p>
-    <p>Aₖ = k<sup>−2,2</sup> scende di 13,2 dB per ottava: la 10ª parziale è 44 dB sotto la fondamentale, timbro scuro e morbido. Le parziali oltre il 45% della frequenza di campionamento sono scartate per evitare aliasing. Le fasi φₖ sono casuali e fisse.</p>
-    <p>I passi successivi modificano questa somma: l'altezza (detune, jitter), la posizione delle parziali (inarmonicità), la loro ampiezza (spectral tilt), la forma d'onda (wavefolding).</p>`,
+  id: "note", label: "Note", eyebrow: "Step 2 · Source",
+  title: "A note is a sum of partials",
+  lead: "The starting note is harmonic: its partials sit at whole-number multiples of the fundamental, and the ear fuses them into a single pitch.",
+  formula: ["x(t) = Σₖ k^−2.2 · sin(2π · k · f₀ · t + φₖ)"],
+  hear: "Adding partials fills out the timbre, but the pitch stays the same.",
+  more: `<p>Every periodic sound is a sum of sine waves (a Fourier series). Each sine is a <b>partial</b>; the <b>spectrum</b> shows the amplitude of each one. Harmonic partials (fₖ = k · f₀) fuse into one note at pitch f₀; their number and amplitudes define the <b>timbre</b>.</p>
+    <p>Aₖ = k<sup>−2.2</sup> falls by 13.2 dB per octave: the 10th partial is 44 dB below the fundamental, giving a dark, soft timbre. Partials above 45% of the sample rate are dropped to avoid aliasing. The phases φₖ are random and fixed.</p>
+    <p>The next steps change this sum: the pitch (detune, jitter), the position of the partials (inharmonicity), their amplitude (spectral tilt), and the waveform (wavefolding).</p>`,
   build(t) {
     const o = { N: DEF.partials, f0: DEF.f0 };
     const sp = plot(t, 260, (ctx, w, h) => drawSpectrum(ctx, w, h, { parts: partialsOf({ f0: o.f0, N: o.N }), fmax: Math.min(12000, Math.max(1500, o.f0 * o.N * 1.05)) }));
     const st = stats(t);
     const k = el("div", { class: "knobs" }); t.append(k);
-    knob(k, { label: "Parziali N", main: true, min: 1, max: 40, step: 1, value: o.N, fmt: v => String(v), onInput: v => { o.N = v; redraw(); } });
-    options(t, b => chips(b, { title: "Fondamentale f₀", label: "Fondamentale", options: NOTES, value: o.f0, onChange: v => { o.f0 = v; redraw(); } }));
-    function redraw() { sp.redraw(); const ps = partialsOf({ f0: o.f0, N: o.N }), last = ps[ps.length - 1]; st([[fmtN(o.f0, 0) + " Hz", "fondamentale f₀"], [fmtN(last.f, 0) + " Hz", `parziale ${last.k}`], [fmtN(db(last.a), 0) + " dB", "sua ampiezza"]]); }
+    knob(k, { label: "Partials N", main: true, min: 1, max: 40, step: 1, value: o.N, fmt: v => String(v), onInput: v => { o.N = v; redraw(); } });
+    options(t, b => chips(b, { title: "Fundamental f₀", label: "Fundamental", options: NOTES, value: o.f0, onChange: v => { o.f0 = v; redraw(); } }));
+    function redraw() { sp.redraw(); const ps = partialsOf({ f0: o.f0, N: o.N }), last = ps[ps.length - 1]; st([[fmtN(o.f0, 0) + " Hz", "fundamental f₀"], [fmtN(last.f, 0) + " Hz", `partial ${last.k}`], [fmtN(db(last.a), 0) + " dB", "its amplitude"]]); }
     redraw();
     const job = (N, extra = {}) => Object.assign({ dur: 2.5, partials: N, fx: NOFX, voices: [voice({ f0: o.f0 })] }, extra);
-    listen(t, { label: "Costruisci la nota", run: b => playJobs(b, [job(o.N, { dur: o.N * 0.2 + 1.5, buildup: 0.2 })], "una parziale ogni 0,2 s") }, [
-      { label: "Solo fondamentale", run: b => playJobs(b, [job(1)], "sinusoide") },
-      { label: "Nota completa", run: b => playJobs(b, [job(o.N)], `${o.N} parziali`) }
+    listen(t, { label: "Build the note", run: b => playJobs(b, [job(o.N, { dur: o.N * 0.2 + 1.5, buildup: 0.2 })], "one partial every 0.2 s") }, [
+      { label: "Fundamental only", run: b => playJobs(b, [job(1)], "sine wave") },
+      { label: "Full note", run: b => playJobs(b, [job(o.N)], `${o.N} partials`) }
     ]);
   }
 });
 
-// ---------- slide di un effetto: una nota, un solo effetto ----------
+// ---------- effect slide: one note, one effect ----------
 function effectSlide(def) {
   addSlide({
     id: def.id, label: def.label, eyebrow: def.eyebrow, title: def.title, lead: def.lead, formula: def.formula, hear: def.hear, more: def.more,
@@ -606,88 +606,88 @@ function effectSlide(def) {
       const draw = plot(t, def.height || 240, (ctx, w, h) => def.draw(ctx, w, h, st, sv()));
       const statsSet = stats(t);
       const k = el("div", { class: "knobs" }); t.append(k);
-      const sK = knob(k, { label: "Stranezza s", main: true, min: 0, max: 1, step: 0.01, value: st.s, fmt: v => fmtN(v), onInput: v => { st.s = v; st.live = null; redraw(); } });
+      const sK = knob(k, { label: "Strangeness s", main: true, min: 0, max: 1, step: 0.01, value: st.s, fmt: v => fmtN(v), onInput: v => { st.s = v; st.live = null; redraw(); } });
       knob(k, Object.assign({}, def.depth, { onInput: v => { st.depth = v; redraw(); } }));
       const fx = () => Object.assign({}, NOFX, { [def.key]: st.depth });
       const job = (s, d = 2.5) => ({ dur: d, partials: DEF.partials, fx: fx(), voices: [voice({ f0: st.f0, ghost: st.ghost, s })] });
       options(t, b => {
-        knob(b, { label: "Voce fantasma", min: 0, max: 1, step: 0.05, value: st.ghost, fmt: v => v ? Math.round(v * 100) + "%" : "spenta", onInput: v => { st.ghost = v; redraw(); } });
-        chips(b, { title: "Fondamentale f₀", label: "Fondamentale", options: NOTES, value: st.f0, onChange: v => { st.f0 = v; redraw(); } });
+        knob(b, { label: "Ghost voice", min: 0, max: 1, step: 0.05, value: st.ghost, fmt: v => v ? Math.round(v * 100) + "%" : "off", onInput: v => { st.ghost = v; redraw(); } });
+        chips(b, { title: "Fundamental f₀", label: "Fundamental", options: NOTES, value: st.f0, onChange: v => { st.f0 = v; redraw(); } });
       });
       function redraw() { draw.redraw(); statsSet(def.stats(st, sv())); }
       redraw();
-      listen(t, { label: "Rampa: s da 0 a 1", run: b => playJobs(b, [job({ type: "ramp", from: 0, to: 1 }, 6)], `${def.label} · rampa`, p => { st.live = p ? p.frac : null; sK.set(sv()); redraw(); }) }, [
-        { label: "Pulita", run: b => playJobs(b, [job(C(0))], "nota pulita") },
-        { label: "Con effetto", run: b => playJobs(b, [job(C(st.s))], `${def.label} · s = ${fmtN(st.s)}`) },
-        { label: "A/B", run: b => playJobs(b, [job(C(0)), job(C(st.s))], `A pulita · B ${def.label}`) }
+      listen(t, { label: "Ramp: s from 0 to 1", run: b => playJobs(b, [job({ type: "ramp", from: 0, to: 1 }, 6)], `${def.label} · ramp`, p => { st.live = p ? p.frac : null; sK.set(sv()); redraw(); }) }, [
+        { label: "Clean", run: b => playJobs(b, [job(C(0))], "clean note") },
+        { label: "With effect", run: b => playJobs(b, [job(C(st.s))], `${def.label} · s = ${fmtN(st.s)}`) },
+        { label: "A/B", run: b => playJobs(b, [job(C(0)), job(C(st.s))], `A clean · B ${def.label}`) }
       ]);
     }
   });
 }
 
 effectSlide({
-  id: "detune", key: "detune", label: "Detune", eyebrow: "Passo 3 · Altezza",
-  title: "Detune: la nota si sposta",
-  lead: "Tutta la nota sale o scende di qualche cent. Accanto alla voce fantasma, che resta ferma, nascono i battimenti.",
-  formula: ["Δc = dir · D · s", "f = f₀ · 2^(Δc / 1200)", "battimento = k · |f − f₀|"],
-  hear: "Una pulsazione del volume che accelera con s, fino a diventare ruvidità.",
-  more: `<p>100 cent sono un semitono, 1200 un'ottava: la scala è logaritmica come la percezione dell'altezza. D è la profondità (predefinita 90 cent). dir = −1 per ICSE e +1 per FSE e ASE, così nell'accordo le note si allontanano invece di trasporsi insieme.</p>
-    <p>Da sola, una nota spostata sembra solo un'altra nota: serve un riferimento. Due sinusoidi vicine sommate oscillano in ampiezza alla frequenza |f − f₀| (battimento). La parziale k batte a k · |f − f₀|, quindi le acute battono più in fretta. Oltre circa 15–20 Hz il battimento diventa <b>ruvidità</b>; oltre circa un semitono le due note si separano in un intervallo dissonante.</p>`,
-  depth: { label: "Profondità D", min: 0, max: 200, step: 5, value: DEF.fx.detune, fmt: v => v + " cent" },
+  id: "detune", key: "detune", label: "Detune", eyebrow: "Step 3 · Pitch",
+  title: "Detune: the note shifts",
+  lead: "The whole note moves up or down by a few cents. Next to the ghost voice, which stays put, beats appear.",
+  formula: ["Δc = dir · D · s", "f = f₀ · 2^(Δc / 1200)", "beat = k · |f − f₀|"],
+  hear: "A pulsing in loudness that speeds up with s, until it turns into roughness.",
+  more: `<p>100 cents make a semitone, 1200 an octave: the scale is logarithmic, like pitch perception. D is the depth (90 cents by default). dir = −1 for ICSE and +1 for FSE and ASE, so in the chord the notes move apart instead of transposing together.</p>
+    <p>On its own, a shifted note just sounds like another note: it needs a reference. Two nearby sine waves added together swing in amplitude at |f − f₀| (the beat). Partial k beats at k · |f − f₀|, so high partials beat faster. Above about 15–20 Hz the beating becomes <b>roughness</b>; beyond about a semitone the two notes separate into a dissonant interval.</p>`,
+  depth: { label: "Depth D", min: 0, max: 200, step: 5, value: DEF.fx.detune, fmt: v => v + " cents" },
   draw(ctx, w, h, st, s) {
     const f = st.f0 * Math.pow(2, s * st.depth / 1200), df = Math.abs(f - st.f0), g = st.ghost;
     const a = axes(ctx, w, h, { x0: 0, x1: 2, y0: 0, y1: 1.45, yTicks: [0, 1], yFmt: () => "", xTicks: [0, 1, 2], xFmt: v => v + " s", m: { l: 8 } });
     const env = (k, color, width) => { const pts = []; for (let i = 0; i <= 600; i++) { const tt = i / 300; pts.push([a.X(tt), a.Y(Math.sqrt(1 + g * g + 2 * g * Math.cos(2 * Math.PI * k * df * tt)))]); } line(ctx, pts, color, width); };
     env(10, css("--ghost"), 1.2); env(1, css("--accent"), 2.5);
-    ctx.font = `11px ${css("--font-mono")}`; ctx.textAlign = "left"; ctx.textBaseline = "top"; ctx.fillStyle = css("--accent"); ctx.fillText("1ª parziale", a.m.l + 4, a.m.t); ctx.fillStyle = css("--muted"); ctx.fillText("10ª parziale", a.m.l + 96, a.m.t);
+    ctx.font = `11px ${css("--font-mono")}`; ctx.textAlign = "left"; ctx.textBaseline = "top"; ctx.fillStyle = css("--accent"); ctx.fillText("1st partial", a.m.l + 4, a.m.t); ctx.fillStyle = css("--muted"); ctx.fillText("10th partial", a.m.l + 96, a.m.t);
   },
-  stats(st, s) { const c = s * st.depth, f = st.f0 * Math.pow(2, c / 1200), df = Math.abs(f - st.f0); return [[sign(Math.round(c)) + " cent", "spostamento Δc"], [fmtN(df, 1) + " Hz", "battimento 1ª parziale"], [fmtN(10 * df, 0) + " Hz", "battimento 10ª"]]; }
+  stats(st, s) { const c = s * st.depth, f = st.f0 * Math.pow(2, c / 1200), df = Math.abs(f - st.f0); return [[sign(Math.round(c)) + " cents", "shift Δc"], [fmtN(df, 1) + " Hz", "beat, 1st partial"], [fmtN(10 * df, 0) + " Hz", "beat, 10th"]]; }
 });
 
 const NOISE = jitterNoise(3000);
 effectSlide({
-  id: "jitter", key: "jitter", label: "Jitter", eyebrow: "Passo 4 · Altezza",
-  title: "Jitter: l'altezza non sta ferma",
-  lead: "Una deviazione casuale e continua dell'altezza, che si somma al detune.",
+  id: "jitter", key: "jitter", label: "Jitter", eyebrow: "Step 4 · Pitch",
+  title: "Jitter: the pitch won't sit still",
+  lead: "A continuous random deviation of pitch, added on top of detune.",
   formula: ["Δc = dir · D · s + J · s · n(t)"],
-  hear: "La nota galleggia senza ritmo e i battimenti cambiano velocità di continuo.",
-  more: `<p>n(t) è rumore gaussiano filtrato passa-basso (tre medie mobili, deviazione standard di circa 30 ms) e normalizzato tra −1 e +1: l'altezza scivola senza salti. J è la profondità (predefinita ±20 cent).</p>
-    <p>A differenza del <b>vibrato</b>, periodico e regolare (5–7 Hz) e percepito come espressivo, il jitter non ha periodo e viene percepito come instabilità. In frequenza è piccolo (±20 cent a 220 Hz ≈ ±2,5 Hz): nello spettrogramma quasi non si vede, ma si sente. Qui il detune è spento, quindi il jitter oscilla attorno a f₀.</p>`,
-  depth: { label: "Profondità J", min: 0, max: 60, step: 1, value: DEF.fx.jitter, fmt: v => "±" + v + " cent" },
+  hear: "The note floats without rhythm, and the beats keep changing speed.",
+  more: `<p>n(t) is Gaussian noise, low-pass filtered (three moving averages, standard deviation about 30 ms) and normalised to −1…+1: the pitch glides without jumps. J is the depth (±20 cents by default).</p>
+    <p>Unlike <b>vibrato</b>, which is periodic and regular (5–7 Hz) and heard as expressive, jitter has no period and is heard as instability. In frequency it is small (±20 cents at 220 Hz ≈ ±2.5 Hz): it hardly shows in the spectrogram, but you can hear it. Detune is off on this slide, so jitter wanders around f₀.</p>`,
+  depth: { label: "Depth J", min: 0, max: 60, step: 1, value: DEF.fx.jitter, fmt: v => "±" + v + " cents" },
   draw(ctx, w, h, st, s) {
     const amp = st.depth * s;
     const a = axes(ctx, w, h, { x0: 0, x1: 3, y0: -65, y1: 65, yTicks: [-60, 0, 60], yFmt: v => (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v), xTicks: [0, 1, 2, 3], xFmt: v => v + " s", m: { l: 36 } });
     line(ctx, [[a.X(0), a.Y(0)], [a.X(3), a.Y(0)]], css("--ghost"), 3);
     line(ctx, NOISE.map((v, i) => [a.X(i / 1000), a.Y(amp * v)]), css("--accent"), 2.2);
   },
-  stats(st, s) { const c = st.depth * s; return [["±" + fmtN(c, 0) + " cent", "deviazione massima"], ["±" + fmtN(st.f0 * (Math.pow(2, c / 1200) - 1), 1) + " Hz", "alla fondamentale"]]; }
+  stats(st, s) { const c = st.depth * s; return [["±" + fmtN(c, 0) + " cents", "maximum deviation"], ["±" + fmtN(st.f0 * (Math.pow(2, c / 1200) - 1), 1) + " Hz", "at the fundamental"]]; }
 });
 
 effectSlide({
-  id: "inarmonicita", key: "inharm", label: "Inarmonicità", eyebrow: "Passo 5 · Posizione delle parziali",
-  title: "Inarmonicità: le parziali escono dalla serie",
-  lead: "Le parziali salgono oltre i multipli interi, di più quelle alte. La nota perde un'altezza netta e diventa metallica.",
+  id: "inharmonicity", key: "inharm", label: "Inharmonicity", eyebrow: "Step 5 · Partial positions",
+  title: "Inharmonicity: partials leave the series",
+  lead: "Partials rise above their whole-number multiples, the high ones most. The note loses a clear pitch and turns metallic.",
   formula: ["fₖ = k · f · √(1 + B · s · k²)"],
-  hear: "La fondamentale resta, ma sopra compaiono componenti che non si fondono più con lei.",
-  more: `<p>È il modello fisico della <b>corda rigida</b>: la rigidità alza la frequenza dei modi più alti, come avviene in piccolo nelle corde del pianoforte. Con B = 2,5‰ e s = 1 la 2ª parziale sale dello 0,5%, la 10ª dell'11,8% (circa 2 semitoni), la 20ª del 41%. Lo spostamento cresce con k².</p>
-    <p>Il sistema uditivo raggruppa in una nota le parziali in rapporto intero. Quando i rapporti non sono più interi il raggruppamento si indebolisce: altezza ambigua, timbro metallico, come in campane e gong. Nello spettrogramma del tool le creste si curvano verso l'alto e si aprono a ventaglio.</p>`,
-  depth: { label: "Coefficiente B", min: 0, max: 6, step: 0.1, value: DEF.fx.inharm, fmt: v => fmtN(v, 1) + "‰" },
+  hear: "The fundamental stays, but above it appear components that no longer fuse with it.",
+  more: `<p>This is the physical model of a <b>stiff string</b>: stiffness raises the frequency of the higher modes, as happens slightly in piano strings. With B = 2.5‰ and s = 1 the 2nd partial rises 0.5%, the 10th 11.8% (about 2 semitones), the 20th 41%. The shift grows with k².</p>
+    <p>The auditory system groups partials in whole-number ratios into one note. When the ratios stop being whole numbers, the grouping weakens: ambiguous pitch, metallic timbre, as in bells and gongs. In the tool's spectrogram the ridges bend upwards and fan out.</p>`,
+  depth: { label: "Coefficient B", min: 0, max: 6, step: 0.1, value: DEF.fx.inharm, fmt: v => fmtN(v, 1) + "‰" },
   draw(ctx, w, h, st, s) {
     const ghost = partialsOf({ f0: st.f0, N: DEF.partials });
     drawSpectrum(ctx, w, h, { fmax: 5000, grid: ghost.map(p => p.f), ghost, parts: partialsOf({ f0: st.f0, N: DEF.partials, s, fx: { inharm: st.depth } }) });
   },
-  stats(st, s) { const d = k => (Math.sqrt(1 + st.depth / 1000 * s * k * k) - 1) * 100; return [["+" + fmtN(d(2), 1) + "%", "2ª parziale"], ["+" + fmtN(d(10), 1) + "%", "10ª parziale"], ["+" + fmtN(d(20), 0) + "%", "20ª parziale"]]; }
+  stats(st, s) { const d = k => (Math.sqrt(1 + st.depth / 1000 * s * k * k) - 1) * 100; return [["+" + fmtN(d(2), 1) + "%", "2nd partial"], ["+" + fmtN(d(10), 1) + "%", "10th partial"], ["+" + fmtN(d(20), 0) + "%", "20th partial"]]; }
 });
 
 effectSlide({
-  id: "tilt", key: "bright", label: "Spectral tilt", eyebrow: "Passo 6 · Ampiezza delle parziali",
-  title: "Spectral tilt: più energia agli acuti",
-  lead: "Cambia solo l'ampiezza delle parziali: la pendenza dello spettro si riduce e il suono diventa più brillante.",
-  formula: ["Aₖ = k^−α,   α = 2,2 − T · s", "pendenza = −6,02 · α dB/ottava"],
-  hear: "Stessa altezza, stessa stabilità: più luce e più mordente.",
-  more: `<p>Con s = 0, α = 2,2: −13,2 dB/ottava, spettro ripido, timbro scuro. Con T = 1,2 e s = 1, α = 1: −6 dB/ottava, lo spettro di un dente di sega. La 10ª parziale passa da −44 a −20 dB. Dopo la somma l'onda è normalizzata al picco, quindi la fondamentale perde peso in proporzione.</p>
-    <p>La distribuzione dell'energia tra gravi e acuti è il principale correlato della <b>brillantezza</b>, misurata dal centroide spettrale. Questo effetto rende anche più udibili inarmonicità e battimenti, che sono più marcati proprio nelle parziali alte.</p>`,
-  depth: { label: "Profondità T", min: 0, max: 2, step: 0.05, value: DEF.fx.bright, fmt: v => fmtN(v) },
+  id: "tilt", key: "bright", label: "Spectral tilt", eyebrow: "Step 6 · Partial amplitudes",
+  title: "Spectral tilt: more energy up high",
+  lead: "Only the partial amplitudes change: the spectral slope flattens and the sound gets brighter.",
+  formula: ["Aₖ = k^−α,   α = 2.2 − T · s", "slope = −6.02 · α dB/octave"],
+  hear: "Same pitch, same stability: more light and more bite.",
+  more: `<p>At s = 0, α = 2.2: −13.2 dB/octave, a steep spectrum and a dark timbre. With T = 1.2 and s = 1, α = 1: −6 dB/octave, the spectrum of a sawtooth. The 10th partial goes from −44 to −20 dB. After summing, the wave is normalised to its peak, so the fundamental loses weight in proportion.</p>
+    <p>The balance of energy between low and high partials is the main correlate of perceived <b>brightness</b>, measured by the spectral centroid. This effect also makes inharmonicity and beating more audible, since both are strongest in the high partials.</p>`,
+  depth: { label: "Depth T", min: 0, max: 2, step: 0.05, value: DEF.fx.bright, fmt: v => fmtN(v) },
   draw(ctx, w, h, st, s) {
     const fmax = 5000, alpha = 2.2 - st.depth * s;
     const a = drawSpectrum(ctx, w, h, { fmax, ghost: partialsOf({ f0: st.f0, N: DEF.partials }), parts: partialsOf({ f0: st.f0, N: DEF.partials, s, fx: { bright: st.depth } }) });
@@ -696,35 +696,35 @@ effectSlide({
   },
   stats(st, s) {
     const al = 2.2 - st.depth * s, cen = al2 => { const ps = partialsOf({ f0: st.f0, N: DEF.partials, s: 1, fx: { bright: 2.2 - al2 } }); return ps.reduce((x, p) => x + p.f * p.a, 0) / ps.reduce((x, p) => x + p.a, 0); };
-    return [[fmtN(-6.02 * al, 1) + " dB", "per ottava (da −13,2)"], [Math.round(cen(al)) + " Hz", `centroide (da ${Math.round(cen(2.2))})`]];
+    return [[fmtN(-6.02 * al, 1) + " dB", "per octave (from −13.2)"], [Math.round(cen(al)) + " Hz", `centroid (from ${Math.round(cen(2.2))})`]];
   }
 });
 
 effectSlide({
-  id: "wavefolding", key: "fold", label: "Wavefolding", eyebrow: "Passo 7 · Forma d'onda",
-  title: "Wavefolding: l'onda si ripiega",
-  lead: "La forma d'onda viene amplificata e, oltre il limite, ripiegata su se stessa. Nascono parziali nuove.",
+  id: "wavefolding", key: "fold", label: "Wavefolding", eyebrow: "Step 7 · Waveform",
+  title: "Wavefolding: the wave folds back",
+  lead: "The waveform is amplified and, past the limit, folded back on itself. New partials appear.",
   formula: ["g = 1 + G · s", "y = (1 − s) · x + s · sin(π/2 · g · x)"],
-  hear: "La grana passa da liscia a ronzante, poi ruvida, a salti.",
-  more: `<p>Agisce sulla forma d'onda già sommata e normalizzata (x tra −1 e +1). sin(π/2 · g · x) è la funzione di trasferimento: con g = 1 è quasi una retta; con g più alto i valori oltre il limite vengono <b>riflessi</b> invece che tagliati, anche più volte. Ogni ripiegamento crea un angolo nell'onda.</p>
-    <p>Una non linearità genera armoniche e <b>intermodulazione</b> (somme e differenze tra parziali). Su una nota armonica i prodotti restano armonici: suono più ricco e ruvido. Su una nota già inarmonica cadono in posizioni irregolari: dissonanza. Con guadagni alti compare anche aliasing. Si applica a ogni nota prima di aggiungere il fantasma, che resta pulito.</p>`,
-  depth: { label: "Profondità G", min: 0, max: 10, step: 0.5, value: DEF.fx.fold, fmt: v => "×" + fmtN(1 + v, 1) },
+  hear: "The grain goes from smooth to buzzing, then rough, in steps.",
+  more: `<p>It acts on the waveform that is already summed and normalised (x between −1 and +1). sin(π/2 · g · x) is the transfer function: at g = 1 it is close to a straight line; at higher g, values past the limit are <b>reflected</b> rather than clipped, several times over. Every fold puts a corner in the wave.</p>
+    <p>A nonlinearity creates harmonics and <b>intermodulation</b> (sums and differences between partials). On a harmonic note the products stay harmonic: a richer, rougher sound. On a note that is already inharmonic they land in irregular places: dissonance. High gains also produce aliasing. It is applied to each note before the ghost voice is added, so the ghost stays clean.</p>`,
+  depth: { label: "Depth G", min: 0, max: 10, step: 0.5, value: DEF.fx.fold, fmt: v => "×" + fmtN(1 + v, 1) },
   draw(ctx, w, h, st, s) { drawWave(ctx, w, h, { f0: st.f0, before: cycleOf({ f0: st.f0, N: DEF.partials }, 600, false), cyc: cycleOf({ f0: st.f0, N: DEF.partials, s, fx: { fold: st.depth } }) }); },
   stats(st, s) {
     const g = 1 + st.depth * s, folds = g > 1 ? Math.ceil((g - 1) / 2 - 1e-9) : 0;
     const hs = harmonicsOf(cycleOf({ f0: st.f0, N: DEF.partials, s, fx: { fold: st.depth } })), tot = hs.reduce((a, v) => a + v * v, 0), hi = hs.slice(DEF.partials).reduce((a, v) => a + v * v, 0);
-    return [["×" + fmtN(g, 1), "guadagno g"], [String(folds), "ripiegamenti"], [fmtN(100 * hi / (tot || 1), 1) + "%", "energia in parziali nuove"]];
+    return [["×" + fmtN(g, 1), "gain g"], [String(folds), "folds"], [fmtN(100 * hi / (tot || 1), 1) + "%", "energy in new partials"]];
   }
 });
 
 addSlide({
-  id: "accordo", label: "Accordo", eyebrow: "Passo 8 · Riferimento e mix",
-  title: "Tre conferenze, un accordo",
-  lead: "ICSE, FSE e ASE suonano insieme, ognuna con la sua s e la sua voce fantasma. All'inizio l'accordo è perfettamente consonante.",
-  formula: ["ICSE 110 Hz · FSE 165 Hz · ASE 220 Hz", "quinta giusta 3 : 2 · ottava 2 : 1"],
-  hear: "Nel 2006 l'accordo è fermo. Negli anni recenti le note si deformano in modo diverso e battono anche tra loro.",
-  more: `<p>La <b>voce fantasma</b> è la nota di partenza senza effetti, costante per tutta la durata, a volume relativo 0,35. Si aggiunge dopo il wavefolding, quindi non viene distorta e non intermodula con la nota: rende udibile quanto la nota si è allontanata.</p>
-    <p>Gli intervalli di partenza sono rapporti interi, quindi molte parziali coincidono e non ci sono battimenti. ICSE scende, FSE e ASE salgono: le parziali che coincidevano si separano. Nell'accordo si usa sempre la scala comune. Panorama a potenza costante: sinistra √((1 − p) / 2), destra √((1 + p) / 2), con p = −0,7, 0, +0,7.</p>`,
+  id: "chord", label: "Chord", eyebrow: "Step 8 · Reference and mix",
+  title: "Three conferences, one chord",
+  lead: "ICSE, FSE and ASE play together, each with its own s and its own ghost voice. At the start the chord is perfectly consonant.",
+  formula: ["ICSE 110 Hz · FSE 165 Hz · ASE 220 Hz", "just fifth 3 : 2 · octave 2 : 1"],
+  hear: "In 2006 the chord is still. In recent years the notes warp by different amounts and also beat against each other.",
+  more: `<p>The <b>ghost voice</b> is the starting note with no effects, constant throughout, at a relative level of 0.35. It is added after wavefolding, so it is not distorted and does not intermodulate with the note: it makes audible how far the note has moved.</p>
+    <p>The starting intervals are whole-number ratios, so many partials coincide and there is no beating. ICSE goes down, FSE and ASE go up: partials that coincided pull apart. The chord always uses the shared scale. Constant-power panning: left √((1 − p) / 2), right √((1 + p) / 2), with p = −0.7, 0, +0.7.</p>`,
   build(t) {
     const st = { i: 17, ghost: DEF.ghost };
     const bars = plot(t, 150, (ctx, w, h) => {
@@ -738,26 +738,26 @@ addSlide({
       });
     });
     const k = el("div", { class: "knobs" }); t.append(k);
-    knob(k, { label: "Anno", main: true, min: 0, max: 19, step: 1, value: st.i, fmt: i => String(YEARS[i]), onInput: v => { st.i = v; bars.redraw(); } });
-    knob(k, { label: "Voci fantasma", min: 0, max: 1, step: 0.05, value: st.ghost, fmt: v => v ? Math.round(v * 100) + "%" : "spente", onInput: v => { st.ghost = v; } });
+    knob(k, { label: "Year", main: true, min: 0, max: 19, step: 1, value: st.i, fmt: i => String(YEARS[i]), onInput: v => { st.i = v; bars.redraw(); } });
+    knob(k, { label: "Ghost voices", min: 0, max: 1, step: 0.05, value: st.ghost, fmt: v => v ? Math.round(v * 100) + "%" : "off", onInput: v => { st.ghost = v; } });
     bars.redraw();
     const job = (i, ghost) => ({ dur: 3, partials: DEF.partials, fx: DEF.fx, voices: NAMES.map(n => voice({ f0: CHORD[n].f0, dir: CHORD[n].dir, pan: CHORD[n].pan, ghost, s: C(sYear(n, i)) })) });
-    listen(t, { label: "Ascolta l'anno", run: b => playJobs(b, [job(st.i, st.ghost)], `accordo ${YEARS[st.i]}`) }, [
-      { label: "2006 → anno", run: b => playJobs(b, [job(0, st.ghost), job(st.i, st.ghost)], `A 2006 · B ${YEARS[st.i]}`) },
-      { label: "Senza fantasmi", run: b => playJobs(b, [job(st.i, 0)], `${YEARS[st.i]} senza fantasmi`) },
-      { label: "Solo fantasmi", run: b => playJobs(b, [{ dur: 3, partials: DEF.partials, fx: NOFX, voices: NAMES.map(n => voice({ f0: CHORD[n].f0, pan: CHORD[n].pan, ghost: 1, note: false })) }], "accordo dei fantasmi") }
+    listen(t, { label: "Hear this year", run: b => playJobs(b, [job(st.i, st.ghost)], `chord ${YEARS[st.i]}`) }, [
+      { label: "2006 → year", run: b => playJobs(b, [job(0, st.ghost), job(st.i, st.ghost)], `A 2006 · B ${YEARS[st.i]}`) },
+      { label: "No ghosts", run: b => playJobs(b, [job(st.i, 0)], `${YEARS[st.i]} without ghosts`) },
+      { label: "Ghosts only", run: b => playJobs(b, [{ dur: 3, partials: DEF.partials, fx: NOFX, voices: NAMES.map(n => voice({ f0: CHORD[n].f0, pan: CHORD[n].pan, ghost: 1, note: false })) }], "ghost chord") }
     ]);
   }
 });
 
 addSlide({
-  id: "tempo", label: "Tempo", eyebrow: "Passo 9 · Tempo",
-  title: "Il tempo: un anno al secondo",
-  lead: "Il valore annuale di s viene interpolato e smussato, e un beat segna l'inizio di ogni anno.",
-  formula: ["durata = 20 × durata di un anno", "smussamento gaussiano, σ = ¼ di anno"],
-  hear: "Il beat è la griglia. Gli effetti crescono in modo continuo, senza scatti tra un anno e l'altro.",
-  more: `<p>Ogni valore annuale è collocato al centro del suo anno, interpolato linearmente fino al successivo e filtrato con tre medie mobili; γ si applica dopo. Il cambiamento di un anno comincia quindi a sentirsi nella seconda metà dell'anno precedente.</p>
-    <p><b>Beat</b>: due sinusoidi smorzate, 1250 Hz (10 ms) e 2780 Hz (6 ms), troppo brevi per avere un'altezza. Negli anni multipli di 5 si aggiunge un accento a 62 Hz (90 ms). <b>Respiro lento</b> (spento di default): modulazione d'ampiezza 0,6 + 0,4 · sin²(2π · 0,11 · t), senza informazione sui dati.</p>`,
+  id: "time", label: "Time", eyebrow: "Step 9 · Time",
+  title: "Time: one year per second",
+  lead: "The yearly value of s is interpolated and smoothed, and a beat marks the start of every year.",
+  formula: ["length = 20 × length of a year", "Gaussian smoothing, σ = ¼ year"],
+  hear: "The beat is the grid. The effects grow continuously, with no jumps between years.",
+  more: `<p>Each yearly value sits at the centre of its year, is linearly interpolated to the next, and is filtered with three moving averages; γ is applied afterwards. So a year's change starts to be heard in the second half of the year before.</p>
+    <p><b>Beat</b>: two damped sine waves, 1250 Hz (10 ms) and 2780 Hz (6 ms), too short to have a pitch. In years divisible by 5 an accent is added at 62 Hz (90 ms). <b>Slow breathing</b> (off by default): amplitude modulation 0.6 + 0.4 · sin²(2π · 0.11 · t), carrying no information about the data.</p>`,
   build(t) {
     const st = { spy: DEF.spy, beat: DEF.beat, accent: DEF.accent, breath: DEF.breath };
     let ph = null;
@@ -775,82 +775,82 @@ addSlide({
       NAMES.forEach((n, j) => { ctx.fillStyle = css(`--${n.toLowerCase()}`); ctx.fillText(n, a.m.l + 6 + j * 52, a.m.t); });
     });
     const k = el("div", { class: "knobs" }); t.append(k);
-    knob(k, { label: "Durata di un anno", min: 0.4, max: 2, step: 0.05, value: st.spy, fmt: v => fmtN(v) + " s", onInput: v => { st.spy = v; } });
-    knob(k, { label: "Volume del beat", min: 0, max: 1, step: 0.05, value: st.beat, fmt: v => v ? Math.round(v * 100) + "%" : "spento", onInput: v => { st.beat = v; } });
-    options(t, b => { const c = el("div", { class: "chips" }); b.append(c); toggle(c, "Accento ogni 5 anni", st.accent, v => { st.accent = v; ch.redraw(); }); toggle(c, "Respiro lento", st.breath, v => { st.breath = v; }); });
+    knob(k, { label: "Length of a year", min: 0.4, max: 2, step: 0.05, value: st.spy, fmt: v => fmtN(v) + " s", onInput: v => { st.spy = v; } });
+    knob(k, { label: "Beat volume", min: 0, max: 1, step: 0.05, value: st.beat, fmt: v => v ? Math.round(v * 100) + "%" : "off", onInput: v => { st.beat = v; } });
+    options(t, b => { const c = el("div", { class: "chips" }); b.append(c); toggle(c, "Accent every 5 years", st.accent, v => { st.accent = v; ch.redraw(); }); toggle(c, "Slow breathing", st.breath, v => { st.breath = v; }); });
     ch.redraw();
     const prog = p => { ph = p ? p.t / (20 * st.spy) : null; ch.redraw(); };
-    listen(t, { label: "Ascolta il brano completo", run: b => playJobs(b, [fullPieceJob({ spy: st.spy, beat: st.beat, accent: st.accent, breath: st.breath })], "brano completo", prog) }, [
-      { label: "Solo beat", run: b => playJobs(b, [{ dur: 20 * st.spy, partials: DEF.partials, fx: NOFX, voices: [], beat: { vol: Math.max(st.beat, 0.3), accent: st.accent, spy: st.spy } }], "beat", prog) }
+    listen(t, { label: "Hear the full piece", run: b => playJobs(b, [fullPieceJob({ spy: st.spy, beat: st.beat, accent: st.accent, breath: st.breath })], "full piece", prog) }, [
+      { label: "Beat only", run: b => playJobs(b, [{ dur: 20 * st.spy, partials: DEF.partials, fx: NOFX, voices: [], beat: { vol: Math.max(st.beat, 0.3), accent: st.accent, spy: st.spy } }], "beat", prog) }
     ]);
   }
 });
 
-const FX_NAMES = { detune: "Detune", jitter: "Jitter", inharm: "Inarmonicità", bright: "Spectral tilt", fold: "Wavefolding" };
+const FX_NAMES = { detune: "Detune", jitter: "Jitter", inharm: "Inharmonicity", bright: "Spectral tilt", fold: "Wavefolding" };
 const FX_CUES = {
-  detune: "battimenti regolari con il fantasma, che accelerano in modo uniforme.",
-  jitter: "altezza instabile e battimenti irregolari, senza ritmo.",
-  inharm: "la fondamentale resta, ma sopra compaiono componenti che non si fondono: timbro metallico.",
-  bright: "suono più chiaro e tagliente, senza cambiare altezza né stabilità.",
-  fold: "cambia la grana: da liscia a ronzante e ruvida, a salti."
+  detune: "regular beats against the ghost voice, speeding up evenly.",
+  jitter: "unsteady pitch and irregular beats, with no rhythm.",
+  inharm: "the fundamental stays, but components above it no longer fuse: a metallic timbre.",
+  bright: "a clearer, sharper sound, with no change in pitch or stability.",
+  fold: "the grain changes: from smooth to buzzing and rough, in steps."
 };
 addSlide({
-  id: "ascolto", label: "Ascolto", eyebrow: "Passo 10 · Riconoscere",
-  title: "Riconoscere gli effetti",
-  lead: "Spegni un effetto alla volta nel brano completo, poi mettiti alla prova con il quiz.",
+  id: "listening", label: "Listening", eyebrow: "Step 10 · Recognising",
+  title: "Recognising the effects",
+  lead: "Switch effects off one at a time in the full piece, then test yourself with the quiz.",
   formula: null,
-  hear: "Altezza: detune e jitter. Coerenza: inarmonicità. Timbro: spectral tilt. Grana: wavefolding.",
-  more: `<ul>${Object.keys(FX_NAMES).map(k => `<li><b>${FX_NAMES[k]}</b>: ${FX_CUES[k]}</li>`).join("")}</ul><p>Nella sottrazione concentrati sugli anni 2022–2025, dove s è più alta.</p>`,
+  hear: "Pitch: detune and jitter. Coherence: inharmonicity. Timbre: spectral tilt. Grain: wavefolding.",
+  more: `<ul>${Object.keys(FX_NAMES).map(k => `<li><b>${FX_NAMES[k]}</b>: ${FX_CUES[k]}</li>`).join("")}</ul><p>When subtracting, focus on 2022–2025, where s is highest.</p>`,
   build(t) {
     const on = { detune: true, jitter: true, inharm: true, bright: true, fold: true };
-    t.append(el("p", { class: "sub", text: "Sottrazione" }));
+    t.append(el("p", { class: "sub", text: "Subtraction" }));
     const c = el("div", { class: "chips" }); t.append(c);
     Object.keys(FX_NAMES).forEach(k => toggle(c, FX_NAMES[k], true, v => { on[k] = v; }));
-    listen(t, { label: "Ascolta con gli effetti accesi", run: b => {
+    listen(t, { label: "Play with these effects", run: b => {
       const fx = {}; Object.keys(FX_NAMES).forEach(k => fx[k] = on[k] ? DEF.fx[k] : 0);
       const off = Object.keys(FX_NAMES).filter(k => !on[k]).map(k => FX_NAMES[k]);
-      playJobs(b, [fullPieceJob({ fx })], off.length ? "senza " + off.join(", ") : "brano completo", p => { if (p) nowEl.textContent = `▶ ${YEARS[Math.min(19, Math.floor(p.t))]}` + (off.length ? " · senza " + off.join(", ") : ""); });
+      playJobs(b, [fullPieceJob({ fx })], off.length ? "without " + off.join(", ") : "full piece", p => { if (p) nowEl.textContent = `▶ ${YEARS[Math.min(19, Math.floor(p.t))]}` + (off.length ? " · without " + off.join(", ") : ""); });
     } });
     t.append(el("div", { class: "divider" }));
     t.append(el("p", { class: "sub", text: "Quiz" }));
     const q = { key: null, right: 0, total: 0, done: false }, keys = Object.keys(FX_NAMES);
-    const fb = el("p", { class: "feedback", "aria-live": "polite", text: "Ascolta una rampa con un solo effetto e indovina quale." });
+    const fb = el("p", { class: "feedback", "aria-live": "polite", text: "Listen to a ramp with a single effect and guess which one it is." });
     const ans = el("div", { class: "chips" });
     const btns = keys.map(k => { const b = el("button", { type: "button", class: "chip", text: FX_NAMES[k], disabled: "" }); b.addEventListener("click", () => answer(k, b)); ans.append(b); return b; });
     const job = () => ({ dur: 6, partials: DEF.partials, fx: Object.assign({}, NOFX, { [q.key]: DEF.fx[q.key] }), voices: [voice({ ghost: DEF.ghost, s: { type: "ramp", from: 0, to: 1 } })] });
-    listen(t, { label: "Nuovo quesito", run: b => { let k; do { k = keys[Math.floor(Math.random() * keys.length)]; } while (k === q.key && Math.random() < 0.7);
-      q.key = k; q.done = false; fb.textContent = "Quale effetto senti?"; btns.forEach(x => { x.disabled = false; x.classList.remove("right", "wrong"); }); playJobs(b, [job()], "quiz"); } },
-      [{ label: "Riascolta", run: b => { if (q.key) playJobs(b, [job()], "quiz"); } }]);
+    listen(t, { label: "New question", run: b => { let k; do { k = keys[Math.floor(Math.random() * keys.length)]; } while (k === q.key && Math.random() < 0.7);
+      q.key = k; q.done = false; fb.textContent = "Which effect do you hear?"; btns.forEach(x => { x.disabled = false; x.classList.remove("right", "wrong"); }); playJobs(b, [job()], "quiz"); } },
+      [{ label: "Play again", run: b => { if (q.key) playJobs(b, [job()], "quiz"); } }]);
     t.append(ans, fb);
     function answer(k, b) {
       if (q.done) return; q.done = true; q.total++;
-      if (k === q.key) { q.right++; b.classList.add("right"); fb.textContent = `Giusto · ${q.right} su ${q.total}. ${FX_NAMES[k]}: ${FX_CUES[k]}`; }
-      else { b.classList.add("wrong"); btns[keys.indexOf(q.key)].classList.add("right"); fb.textContent = `Era ${FX_NAMES[q.key]} · ${q.right} su ${q.total}. ${FX_CUES[q.key]}`; }
+      if (k === q.key) { q.right++; b.classList.add("right"); fb.textContent = `Correct · ${q.right} of ${q.total}. ${FX_NAMES[k]}: ${FX_CUES[k]}`; }
+      else { b.classList.add("wrong"); btns[keys.indexOf(q.key)].classList.add("right"); fb.textContent = `It was ${FX_NAMES[q.key]} · ${q.right} of ${q.total}. ${FX_CUES[q.key]}`; }
     }
   }
 });
 
 addSlide({
-  id: "tool", label: "Tool", eyebrow: "Fine",
-  title: "Pronto per il tool",
-  lead: "Il tool usa gli stessi parametri, con gli stessi nomi e valori, e aggiunge la vista completa del brano.",
+  id: "tool", label: "Tool", eyebrow: "The end",
+  title: "Ready for the tool",
+  lead: "The tool uses the same parameters, with the same names and values, and adds a view of the whole piece.",
   formula: null,
-  hear: "Nel tool il pulsante «Solo» su ogni effetto fa lo stesso isolamento di queste slide.",
+  hear: "In the tool, the Solo button on each effect gives the same isolation as these slides.",
   more: `<table class="map"><tbody>${[
-    ["Soglia, saturazione, scala, γ", "Dal dato alla stranezza"], ["Dati reali o rampa", "Ascolto · Sorgente della stranezza"], ["Accordo o conferenza singola", "Ascolto · Cosa suonare"],
-    ["Parziali, nota, voce fantasma, respiro", "Voci"], ["Detune, jitter, inarmonicità, spectral tilt, wavefolding", "Effetti di sintesi"],
-    ["Durata di un anno, beat, accento", "Tempo e beat"], ["Norma, smussamento", "fissi"]].map(([a, b]) => `<tr><td>${a}</td><td>${b}</td></tr>`).join("")}</tbody></table>`,
+    ["Threshold, saturation, scale, γ", "From data to strangeness"], ["Real data or ramp", "Listening · Strangeness source"], ["Chord or single conference", "Listening · What to play"],
+    ["Partials, note, ghost voice, breathing", "Voices"], ["Detune, jitter, inharmonicity, spectral tilt, wavefolding", "Synthesis effects"],
+    ["Length of a year, beat, accent", "Time and beat"], ["Baseline, smoothing", "fixed"]].map(([a, b]) => `<tr><td>${a}</td><td>${b}</td></tr>`).join("")}</tbody></table>`,
   build(t) {
     t.append(el("ul", { class: "feat" }, [
-      el("li", { text: "Spettrogramma 3D del brano, con viste Prospettiva, Dall'alto, Profilo e Barre" }),
-      el("li", { text: "Barra del tempo per muoversi tra gli anni" }),
-      el("li", { text: "Esportazione delle impostazioni per generare i WAV con sonify.py" })
+      el("li", { text: "3D spectrogram of the piece, with Perspective, Top, Profile and Bars views" }),
+      el("li", { text: "Time bar to move between years" }),
+      el("li", { text: "Settings export to render WAV files with sonify.py" })
     ]));
-    t.append(el("a", { class: "cta", href: "lab.html", text: "Apri Sottomissioni in Suono →" }));
+    t.append(el("a", { class: "cta", href: "lab.html", text: "Open Submissions in Sound →" }));
   }
 });
 
-// ---------------- navigazione ----------------
+// ---------------- navigation ----------------
 const progEl = document.getElementById("progress"), slideEl = document.getElementById("slide"), nameEl = document.getElementById("stepName");
 const prevBtn = document.getElementById("prev"), nextBtn = document.getElementById("next");
 let seen = new Set();
@@ -865,15 +865,15 @@ function go(i) {
   slideEl.textContent = "";
   const idea = el("article", { class: "idea" }, [el("p", { class: "eyebrow", text: s.eyebrow }), el("h2", { text: s.title }), el("p", { class: "lead", text: s.lead })]);
   if (s.formula) idea.append(el("div", { class: "formula" }, s.formula.map(f => el("div", { text: f }))));
-  if (s.hear) idea.append(el("p", { class: "hear" }, [el("span", { text: "Cosa ascoltare" }), s.hear]));
-  if (s.more) { const d = el("details", { class: "more" }, [el("summary", { text: "Approfondimento tecnico" })]); d.append(el("div", { class: "body", html: s.more })); idea.append(d); }
-  const tool = el("section", { class: "tool", "aria-label": "Esperimento" });
+  if (s.hear) idea.append(el("p", { class: "hear" }, [el("span", { text: "What to listen for" }), s.hear]));
+  if (s.more) { const d = el("details", { class: "more" }, [el("summary", { text: "Technical details" })]); d.append(el("div", { class: "body", html: s.more })); idea.append(d); }
+  const tool = el("section", { class: "tool", "aria-label": "Experiment" });
   slideEl.append(idea, tool);
   s.build(tool);
   nameEl.textContent = `${i + 1} / ${SLIDES.length} · ${s.label}`;
   [...progEl.children].forEach((b, j) => { b.classList.toggle("seen", seen.has(SLIDES[j].id)); if (j === i) b.setAttribute("aria-current", "step"); else b.removeAttribute("aria-current"); });
   prevBtn.disabled = i === 0;
-  nextBtn.textContent = i === SLIDES.length - 1 ? "Fine" : "Ho capito";
+  nextBtn.textContent = i === SLIDES.length - 1 ? "Done" : "Got it";
   if (location.hash !== "#" + s.id) history.replaceState(null, "", "#" + s.id);
   window.scrollTo({ top: 0 }); slideEl.focus({ preventScroll: true });
 }
