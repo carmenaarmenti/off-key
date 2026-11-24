@@ -1,14 +1,10 @@
 # Off Key
 
-<img src="assets/logo.svg" alt="Off Key logo" width="72">
-
 *An anatomy of strangeness in conference submissions.*
 
 Off Key is a sonification of submissions to ICSE, FSE and ASE from 2006 to 2025. Each conference is a note. The further a year's submissions drift from the historical baseline (their median over a baseline period, 2006–2015 by default), the more the note warps out of tune, until the chord no longer sounds right.
 
 A welcome page plays the piece and offers two ways in: **Anatomy of Strangeness**, a step-by-step tutorial on how the sound is built, and **Submissions in Sound**, the full tool.
-
-The logo is a sine wave passed through the model's own wavefolding, with strangeness rising from 0 on the left to 1 on the right. While the preview plays, the fold grows with the piece.
 
 **Live site:** https://carmenaarmenti.github.io/off-key/ (the welcome page; the tutorial is at `tutorial.html`, the tool at `lab.html`).
 
@@ -21,7 +17,7 @@ The logo is a sine wave passed through the model's own wavefolding, with strange
 | `glossary.html` | The glossary: one page per concept, with narrower ideas as its sections, and an index of all concepts |
 | `glossary-data.js` | The concepts themselves, shared by the tutorial (for its links) and the glossary page |
 | `lab.html` | The full tool: every parameter, a 3D spectrogram, a Pitch view, a time bar, and settings you can save to and load from a JSON file |
-| `assets/` | The logo (`logo.svg`, also the favicon) and the preview played on the welcome page (`off-key-chord.mp4`, the default chord rendered by `sonify.py` and encoded as AAC with `afconvert -f m4af -d aac -b 128000`; the `.mp4` name is because claude.ai does not serve `.m4a`) |
+| `assets/` | The preview played on the welcome page (`off-key-chord.mp4`, the default chord rendered by `sonify.py` and encoded as AAC with `afconvert -f m4af -d aac -b 128000`; the `.mp4` name is because claude.ai does not serve `.m4a`) |
 | `sonify.py` | Renders WAV files with the same model, reading settings exported from the tool |
 | `build.sh` | Packages the pages, either for claude.ai or, with `--site`, for an ordinary web host; the welcome page becomes `index.html` |
 | `.github/workflows/pages.yml` | Builds the site and publishes it to GitHub Pages on every push to `main` |

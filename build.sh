@@ -1,7 +1,7 @@
 #!/bin/sh
 # Packages the pages that are published together:
 #   welcome.html (the home page), the tutorial, lab.html (the full tool) and glossary.html (one page per concept),
-#   plus glossary-data.js, the concepts shared by the tutorial and the glossary, and assets/ (logo and audio preview).
+#   plus glossary-data.js, the concepts shared by the tutorial and the glossary, and assets/ (the audio preview).
 #
 # The source pages have no <html>/<head>: claude.ai adds them to the page it publishes.
 #   ./build.sh [folder]          for claude.ai: index.html (the welcome page) as it is, the other pages wrapped in full documents
@@ -23,7 +23,7 @@ wrap "$here/tutorial.html" > "$out/tutorial.html"
 wrap "$here/lab.html" > "$out/lab.html"
 wrap "$here/glossary.html" > "$out/glossary.html"
 cp "$here/glossary-data.js" "$out/glossary-data.js"
-cp "$here/assets/logo.svg" "$here/assets/off-key-chord.mp4" "$out/assets/"
+cp "$here/assets/off-key-chord.mp4" "$out/assets/"
 if [ "$mode" = "--site" ]; then
   wrap "$here/welcome.html" > "$out/index.html"
 else
