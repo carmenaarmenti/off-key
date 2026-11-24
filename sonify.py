@@ -1,23 +1,23 @@
-"""Sonificazione 'perturbante' delle sottomissioni a ICSE, FSE, ASE (2006-2025).
+"""Uncanny sonification of submissions to ICSE, FSE and ASE (2006-2025).
 
-Stessa logica della pagina "Sottomissioni in Suono" (lab.html).
+Same model as the "Submissions in Sound" page (lab.html).
 
-Uso:
-    python3 sonify.py                             # impostazioni predefinite -> sottomissioni-accordo.wav
-    python3 sonify.py impostazioni.json           # impostazioni esportate dal tool
-    python3 sonify.py impostazioni.json --tutte   # accordo + ICSE + FSE + ASE, un file ciascuno
+Usage:
+    python3 sonify.py                         # default settings -> submissions-chord.wav
+    python3 sonify.py settings.json           # settings exported from the tool
+    python3 sonify.py settings.json --all     # chord + ICSE + FSE + ASE, one file each
 
-Idea: il suono non dice "quanti", dice "qualcosa non va".
-Per ogni conferenza si misura quanto le sottomissioni di un anno si allontanano
-dalla norma storica (mediana 2006-2015). Questa "stranezza" (0..1) non alza
-volume ne' altezza: deforma la nota.
-  stonatura      la nota scivola fuori intonazione (cent)
-  tremolio       l'intonazione oscilla in modo irregolare
-  armonici       gli armonici si stirano oltre i multipli esatti (campana storta)
-  brillantezza   gli armonici alti diventano piu' forti
-  ripiegamento   l'onda si ripiega su se stessa (wavefolding)
-Ogni nota ha accanto una "voce fantasma": la stessa nota pura e immobile.
-Un beat secco segna l'inizio di ogni anno, con accento ogni 5 anni.
+Idea: the sound does not say "how many", it says "something is wrong".
+For each conference we measure how far a year's submissions drift from the
+historical baseline (the 2006-2015 median). This "strangeness" (0..1) does not
+raise loudness or pitch: it warps the note.
+  detune          the note slides out of tune (cents)
+  jitter          the pitch wobbles at random
+  inharmonicity   partials are stretched past their whole-number multiples
+  spectral tilt   high partials get louder
+  wavefolding     the waveform folds back on itself
+Each note has a "ghost voice" next to it: the same note, clean and unchanging.
+A short click marks the start of each year, with an accent every 5 years.
 """
 import json
 import sys
@@ -30,7 +30,7 @@ from scipy.ndimage import uniform_filter1d
 
 YEARS = np.arange(2006, 2026)
 BASE_END = 2015
-# Fonti: emeryberger/csconferences (CSV) e taoxie.cs.illinois.edu/seconferences.htm (FSE 2006-2010)
+# Sources: emeryberger/csconferences (CSV) and taoxie.cs.illinois.edu/seconferences.htm (FSE 2006-2010)
 DATA = {
     "ICSE": [395, 334, 371, 405, 380, 441, 408, 461, 496, 452,
              530, 415, 502, 529, 617, 615, 691, 780, 1049, 1150],
@@ -39,7 +39,7 @@ DATA = {
     "ASE":  [121, 312, 280, 220, 190, 252, 138, 254, 276, 289,
              284, 367, 386, 448, 395, 440, 531, 633, 587, 1181],
 }
-# FSE su 165 Hz: quinta giusta (3:2) con ICSE, cosi' all'inizio non ci sono battimenti
+# FSE on 165 Hz: a just fifth (3:2) above ICSE, so there is no beating at the start
 CHORD = [("ICSE", 110.00, -0.7, -1), ("FSE", 165.00, 0.0, +1), ("ASE", 220.00, 0.7, +1)]
 
 DEFAULTS = {
@@ -47,11 +47,11 @@ DEFAULTS = {
     "beat": 0.5, "beatAccent": True,
     "threshold": 1.25, "saturate": 1.4, "gamma": 1.3,
     "ghost": 0.35, "baseFreq": 220, "partials": 28,
-    "satMode": "own",   # "own": negli audio singoli la stranezza vale 1 nell'anno di picco
-    "breath": False,    # oscillazione lenta di volume, non legata ai dati
+    "satMode": "own",   # "own": for single conferences, strangeness reaches 1 in the peak year
+    "breath": False,    # slow volume swell, not tied to the data
     "fx": {
-        "detune": {"on": True, "amt": 90},    # cent
-        "jitter": {"on": True, "amt": 20},    # cent
+        "detune": {"on": True, "amt": 90},    # cents
+        "jitter": {"on": True, "amt": 20},    # cents
         "inharm": {"on": True, "amt": 2.5},   # B x 1000
         "bright": {"on": True, "amt": 1.2},
         "fold":   {"on": True, "amt": 5},
@@ -60,7 +60,7 @@ DEFAULTS = {
 
 
 def smooth(a, sigma):
-    """Approssima un filtro gaussiano con tre medie mobili (veloce anche con sigma grandi)."""
+    """Approximate a Gaussian filter with three moving averages (fast even for large sigma)."""
     if sigma < 1:
         return a
     size = max(1, int(round(np.sqrt(4 * sigma * sigma + 1))))
@@ -121,7 +121,7 @@ def render(p):
         if p.get("breath"):
             x *= 0.6 + 0.4 * np.sin(2 * np.pi * 0.11 * t + f0) ** 2
 
-        if p["ghost"] > 0:   # la stessa nota, pura e immobile
+        if p["ghost"] > 0:   # the same note, clean and unchanging
             g = sum(k ** -2.2 * np.sin(2 * np.pi * k * f0 * t) for k in range(1, p["partials"] + 1))
             x += p["ghost"] * g / np.abs(g).max()
         x *= fade
@@ -131,7 +131,7 @@ def render(p):
     out = np.stack([L, R], 1)
     out *= 0.85 / np.abs(out).max()
 
-    if p["beat"] > 0:   # un colpo all'inizio di ogni anno
+    if p["beat"] > 0:   # one click at the start of each year
         tt = np.arange(int(0.3 * sr)) / sr
         click = 0.7 * np.sin(2 * np.pi * 1250 * tt) * np.exp(-tt / 0.010) \
               + 0.35 * np.sin(2 * np.pi * 2780 * tt) * np.exp(-tt / 0.006)
@@ -160,19 +160,19 @@ def merge(base, over):
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     p = deepcopy(DEFAULTS)
-    stem = "sottomissioni"
+    stem = "submissions"
     if args:
         merge(p, json.loads(Path(args[0]).read_text()))
         stem = Path(args[0]).stem
-    modes = ["chord", "ICSE", "FSE", "ASE"] if "--tutte" in sys.argv else [p["mode"]]
+    every = "--all" in sys.argv or "--tutte" in sys.argv   # --tutte kept for older commands
+    modes = ["chord", "ICSE", "FSE", "ASE"] if every else [p["mode"]]
     for mode in modes:
         q = deepcopy(p)
         q["mode"] = mode
         out = render(q)
-        label = "accordo" if mode == "chord" else mode
-        name = f"{stem}-{label}.wav"
+        name = f"{stem}-{mode}.wav"
         wavfile.write(name, q["sr"], (out * 32767).astype(np.int16))
-        print(f"scritto {name} ({len(out) / q['sr']:.1f} s)")
+        print(f"wrote {name} ({len(out) / q['sr']:.1f} s)")
 
 
 if __name__ == "__main__":
