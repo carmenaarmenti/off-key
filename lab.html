@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<title>Sottomissioni in Suono</title>
+<title>Submissions in Sound</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
@@ -171,10 +171,10 @@ button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-v
 <div class="wrap">
   <header>
     <div>
-      <h1>Sottomissioni in Suono</h1>
-      <p>ICSE, FSE e ASE, 2006–2025. Ogni conferenza è una nota che si deforma quando le sottomissioni si allontanano dalla norma storica.</p>
+      <h1>Submissions in Sound</h1>
+      <p>ICSE, FSE and ASE, 2006–2025. Each conference is a note that warps as its submissions drift away from their historical baseline.</p>
     </div>
-    <button type="button" class="explain-toggle" id="explain" aria-pressed="false">Mostra spiegazioni</button>
+    <button type="button" class="explain-toggle" id="explain" aria-pressed="false">Show explanations</button>
   </header>
 
   <div class="layout">
@@ -182,54 +182,54 @@ button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-v
 
     <section class="main">
       <div class="transport">
-        <button class="play" id="play" aria-label="Riproduci"><svg viewBox="0 0 20 20" id="playIcon"><path d="M5 3l12 7-12 7z"/></svg></button>
-        <div class="year" id="year">2006<small>anno in ascolto</small></div>
+        <button class="play" id="play" aria-label="Play"><svg viewBox="0 0 20 20" id="playIcon"><path d="M5 3l12 7-12 7z"/></svg></button>
+        <div class="year" id="year">2006<small>year playing</small></div>
         <div class="meters" id="meters"></div>
-        <div class="status" id="status"><span class="dot"></span><span id="statusText">Calcolo…</span></div>
+        <div class="status" id="status"><span class="dot"></span><span id="statusText">Computing…</span></div>
       </div>
 
       <div class="stage" id="stage">
-        <canvas id="gl" aria-label="Spettrogramma 3D: tempo, frequenza e intensità"></canvas>
+        <canvas id="gl" aria-label="3D spectrogram: time, frequency and intensity"></canvas>
         <div class="labels" id="labels"></div>
         <div class="stage-tools">
-          <div class="seg" id="views" role="group" aria-label="Vista">
-            <button data-view="persp" aria-pressed="true">Prospettiva</button>
-            <button data-view="top" aria-pressed="false">Dall'alto</button>
-            <button data-view="side" aria-pressed="false">Profilo</button>
-            <button data-view="bars" aria-pressed="false">Barre</button>
+          <div class="seg" id="views" role="group" aria-label="View">
+            <button data-view="persp" aria-pressed="true">Perspective</button>
+            <button data-view="top" aria-pressed="false">Top</button>
+            <button data-view="side" aria-pressed="false">Profile</button>
+            <button data-view="bars" aria-pressed="false">Bars</button>
           </div>
-          <span class="hint">Trascina per ruotare · rotella per zoom · tasto destro per spostare</span>
+          <span class="hint">Drag to rotate · scroll to zoom · right-drag to pan</span>
         </div>
-        <div class="legend-cm">debole <i></i> forte</div>
+        <div class="legend-cm">weak <i></i> strong</div>
       </div>
 
       <div class="timeline">
-        <button type="button" id="prevYear" class="step" aria-label="Anno precedente"><svg viewBox="0 0 20 20"><path d="M13 4L6 10l7 6z"/></svg></button>
+        <button type="button" id="prevYear" class="step" aria-label="Previous year"><svg viewBox="0 0 20 20"><path d="M13 4L6 10l7 6z"/></svg></button>
         <div class="tl-track">
-          <input type="range" id="scrub" min="0" max="1000" step="1" value="0" aria-label="Posizione nel tempo">
+          <input type="range" id="scrub" min="0" max="1000" step="1" value="0" aria-label="Position in time">
           <div class="tl-ticks" id="ticks" aria-hidden="true"></div>
         </div>
-        <button type="button" id="nextYear" class="step" aria-label="Anno successivo"><svg viewBox="0 0 20 20"><path d="M7 4l7 6-7 6z"/></svg></button>
+        <button type="button" id="nextYear" class="step" aria-label="Next year"><svg viewBox="0 0 20 20"><path d="M7 4l7 6-7 6z"/></svg></button>
       </div>
-      <p class="help read">Come leggere lo spettrogramma: da sinistra a destra il tempo (anni), in profondità la frequenza, in altezza l'intensità. Ogni cresta è una parziale del suono. Creste dritte e parallele indicano un suono armonico e stabile. Creste curve, irregolari o diffuse indicano l'effetto di detune, inarmonicità e wavefolding. Nella vista Barre ogni barra è un anno e ogni fila, dal fondo verso il davanti, è una fascia di frequenze (dalle gravi alle acute). L'altezza della barra è l'intensità media di quella fascia nell'anno, e l'anno in ascolto è evidenziato. Con il cursore qui sopra ti sposti nel tempo.</p>
+      <p class="help read">Reading the spectrogram: time (years) runs left to right, frequency runs into depth, intensity is height. Each ridge is one partial of the sound. Straight, parallel ridges mean a harmonic, stable sound. Bent, irregular or blurred ridges show the effect of detune, inharmonicity and wavefolding. In the Bars view each bar is a year and each row, from back to front, is a frequency band (low to high). Bar height is the mean intensity of that band in that year, and the year playing is highlighted. Use the slider above to move through time.</p>
 
       <div class="chart">
         <div class="chart-head">
-          <h2>I dati e la stranezza che ne deriva</h2>
+          <h2>The data and the strangeness derived from it</h2>
           <div class="keys" id="keys"></div>
         </div>
-        <canvas id="chart" aria-label="Sottomissioni per anno e curva di stranezza. Clicca per saltare a un anno."></canvas>
-        <p class="help">In alto le sottomissioni per anno. In basso la stranezza (0–1) calcolata con i parametri attuali. Clicca un anno per saltare lì.</p>
+        <canvas id="chart" aria-label="Submissions per year and strangeness curve. Click to jump to a year."></canvas>
+        <p class="help">Top: submissions per year. Bottom: strangeness (0–1) computed with the current settings. Click a year to jump there.</p>
       </div>
 
       <div class="foot">
         <div class="export">
-          <button id="saveJson">Salva impostazioni (.json)</button>
-          <button id="copyJson">Copia impostazioni</button>
+          <button id="saveJson">Save settings (.json)</button>
+          <button id="copyJson">Copy settings</button>
           <span id="toast"></span>
         </div>
-        <p>Le impostazioni salvate si usano con <code>python3 sonify.py impostazioni.json</code> per ottenere il WAV ad alta qualità. Il suono di questa pagina e quello dello script coincidono nella struttura, non campione per campione.</p>
-        <p>Dati: <a href="https://github.com/emeryberger/csconferences" target="_blank" rel="noopener">emeryberger/csconferences</a>; FSE 2006–2010 da <a href="https://taoxie.cs.illinois.edu/seconferences.htm" target="_blank" rel="noopener">Tao Xie, SE conference statistics</a>.</p>
+        <p>Use saved settings with <code>python3 sonify.py settings.json</code> to render a high-quality WAV. This page and the script share the same model, but the audio is not identical sample by sample.</p>
+        <p>Data: <a href="https://github.com/emeryberger/csconferences" target="_blank" rel="noopener">emeryberger/csconferences</a>; FSE 2006–2010 from <a href="https://taoxie.cs.illinois.edu/seconferences.htm" target="_blank" rel="noopener">Tao Xie, SE conference statistics</a>.</p>
       </div>
     </section>
   </div>
@@ -462,7 +462,7 @@ const DATA = {
   ASE:  [121,312,280,220,190,252,138,254,276,289,284,367,386,448,395,440,531,633,587,1181]
 };
 const NAMES = ["ICSE", "FSE", "ASE"];
-const NOTES = { 110: "La2", 146.83: "Re3", 220: "La3", 293.66: "Re4" };
+const NOTES = { 110: "A2", 146.83: "D3", 220: "A3", 293.66: "D4" };
 
 const DEFAULTS = {
   sr: 44100, mode: "chord", source: "data", secPerYear: 1.0,
@@ -482,16 +482,16 @@ const P = JSON.parse(JSON.stringify(DEFAULTS));
 let actx = null, srcNode = null, playing = false, startAt = 0, offset = 0, loopOn = false, renderedMode = "chord";
 
 const FX_INFO = {
-  detune: { label: "Detune (stonatura)", min: 0, max: 200, step: 5, fmt: v => `${v} cent`,
-    help: "Sposta l'altezza della nota rispetto a quella di partenza (100 cent = un semitono). La differenza con la voce fantasma, o con le altre note, produce battimenti." },
-  jitter: { label: "Jitter (tremolio dell'intonazione)", min: 0, max: 60, step: 1, fmt: v => `±${v} cent`,
-    help: "Aggiunge all'altezza della nota una variazione casuale e continua, quindi la nota non resta stabile." },
-  inharm: { label: "Inarmonicità", min: 0, max: 6, step: 0.1, fmt: v => `B = ${v.toFixed(1)}‰`,
-    help: "Sposta le componenti del suono (le parziali) fuori dai multipli esatti della frequenza di base. Il suono perde un'altezza chiara. Nello spettrogramma le creste si curvano verso l'alto." },
-  bright: { label: "Spectral tilt (brillantezza)", min: 0, max: 2, step: 0.05, fmt: v => `${(-6.02 * (2.2 - v)).toFixed(1)} dB/ott`,
-    help: "Cambia l'equilibrio tra componenti gravi e acute: con valori più alti le parziali acute diventano più forti. Il valore indica la pendenza dello spettro alla massima stranezza (partenza: −13,2 dB/ott)." },
-  fold:   { label: "Wavefolding (ripiegamento dell'onda)", min: 0, max: 10, step: 0.5, fmt: v => `guadagno ×${(1 + v).toFixed(1)}`,
-    help: "Amplifica la forma d'onda e la ripiega su se stessa quando supera il limite. Si aggiungono molte nuove parziali e il suono diventa più ruvido." }
+  detune: { label: "Detune", min: 0, max: 200, step: 5, fmt: v => `${v} cent`,
+    help: "Shifts the pitch of the note away from its starting pitch (100 cents = one semitone). The difference from the ghost voice, or from the other notes, produces beats." },
+  jitter: { label: "Jitter", min: 0, max: 60, step: 1, fmt: v => `±${v} cent`,
+    help: "Adds a continuous random deviation to the pitch, so the note never settles." },
+  inharm: { label: "Inharmonicity", min: 0, max: 6, step: 0.1, fmt: v => `B = ${v.toFixed(1)}‰`,
+    help: "Moves the partials off the exact multiples of the fundamental. The sound loses a clear pitch. In the spectrogram the ridges bend upwards." },
+  bright: { label: "Spectral tilt", min: 0, max: 2, step: 0.05, fmt: v => `${(-6.02 * (2.2 - v)).toFixed(1)} dB/oct`,
+    help: "Changes the balance between low and high partials: higher values make the high partials louder. The value is the spectral slope at full strangeness (starting slope: −13.2 dB/oct)." },
+  fold:   { label: "Wavefolding", min: 0, max: 10, step: 0.5, fmt: v => `gain ×${(1 + v).toFixed(1)}`,
+    help: "Amplifies the waveform and folds it back on itself when it exceeds the limit. Many new partials appear and the sound becomes rougher." }
 };
 
 // ---------- pannello di controllo ----------
@@ -545,7 +545,7 @@ const explainBtn = document.getElementById("explain");
 function setExplain(on) {
   document.body.classList.toggle("explain", on);
   explainBtn.setAttribute("aria-pressed", String(on));
-  explainBtn.textContent = on ? "Nascondi spiegazioni" : "Mostra spiegazioni";
+  explainBtn.textContent = on ? "Hide explanations" : "Show explanations";
   try { localStorage.setItem("lab-explain", on ? "1" : "0"); } catch (e) {}
 }
 explainBtn.addEventListener("click", () => setExplain(!document.body.classList.contains("explain")));
@@ -554,48 +554,48 @@ try { explainSaved = localStorage.getItem("lab-explain") === "1"; } catch (e) {}
 setExplain(explainSaved);
 
 controls.append(
-  section("Ascolto", [
-    el("div", { class: "ctl" }, [el("label", { text: "Cosa suonare" }),
-      segmented("mode", "Cosa suonare", [["chord", "Accordo"], ["ICSE", "ICSE"], ["FSE", "FSE"], ["ASE", "ASE"]], () => P.mode, v => { P.mode = v; schedule("render"); })]),
-    el("p", { class: "help", text: "Accordo: le tre conferenze suonano insieme, ICSE su La2 (110 Hz), FSE su Mi3 (165 Hz, quinta giusta 3:2, senza battimenti iniziali), ASE su La3 (220 Hz). Singola: una sola conferenza, sulla nota scelta in «Voci», con la sua voce fantasma." }),
-    el("div", { class: "ctl" }, [el("label", { text: "Sorgente della stranezza" }),
-      segmented("source", "Sorgente", [["data", "Dati reali"], ["ramp", "Rampa 0 → 1"]], () => P.source, v => { P.source = v; schedule("render"); })]),
-    el("p", { class: "help", text: "Dati reali: la stranezza segue le sottomissioni. Rampa: la stranezza sale in modo lineare da 0 a 1, indipendentemente dai dati. Con «Solo» si ascolta un effetto alla volta." }),
-    checkbox("loop", "Ripeti in loop", () => loopOn, v => { loopOn = v; if (srcNode) srcNode.loop = v; })
+  section("Listening", [
+    el("div", { class: "ctl" }, [el("label", { text: "What to play" }),
+      segmented("mode", "What to play", [["chord", "Chord"], ["ICSE", "ICSE"], ["FSE", "FSE"], ["ASE", "ASE"]], () => P.mode, v => { P.mode = v; schedule("render"); })]),
+    el("p", { class: "help", text: "Chord: the three conferences play together, ICSE on A2 (110 Hz), FSE on E3 (165 Hz, a just fifth 3:2, no initial beating), ASE on A3 (220 Hz). Single: one conference, on the note chosen under Voices, with its ghost voice." }),
+    el("div", { class: "ctl" }, [el("label", { text: "Strangeness source" }),
+      segmented("source", "Source", [["data", "Real data"], ["ramp", "Ramp 0 → 1"]], () => P.source, v => { P.source = v; schedule("render"); })]),
+    el("p", { class: "help", text: "Real data: strangeness follows the submissions. Ramp: strangeness rises linearly from 0 to 1, regardless of the data. Use Solo to hear one effect at a time." }),
+    checkbox("loop", "Loop", () => loopOn, v => { loopOn = v; if (srcNode) srcNode.loop = v; })
   ], true),
-  section("Tempo e beat", [
-    slider({ id: "spy", label: "Durata di un anno", min: 0.4, max: 2, step: 0.05, get: () => P.secPerYear, set: v => P.secPerYear = v, fmt: v => `${v.toFixed(2)} s` }),
-    slider({ id: "beat", label: "Volume del beat", min: 0, max: 1, step: 0.05, get: () => P.beat, set: v => P.beat = v, fmt: v => v === 0 ? "spento" : `${Math.round(v * 100)}%`,
-      help: "Un click percussivo all'inizio di ogni anno, per seguire lo scorrere del tempo." }),
-    checkbox("accent", "Accento ogni 5 anni (2010, 2015, 2020, 2025)", () => P.beatAccent, v => { P.beatAccent = v; schedule("render"); })
+  section("Time and beat", [
+    slider({ id: "spy", label: "Length of a year", min: 0.4, max: 2, step: 0.05, get: () => P.secPerYear, set: v => P.secPerYear = v, fmt: v => `${v.toFixed(2)} s` }),
+    slider({ id: "beat", label: "Beat volume", min: 0, max: 1, step: 0.05, get: () => P.beat, set: v => P.beat = v, fmt: v => v === 0 ? "off" : `${Math.round(v * 100)}%`,
+      help: "A percussive click at the start of each year, to follow the passage of time." }),
+    checkbox("accent", "Accent every 5 years (2010, 2015, 2020, 2025)", () => P.beatAccent, v => { P.beatAccent = v; schedule("render"); })
   ]),
-  section("Dal dato alla stranezza", [
-    slider({ id: "thr", label: "Soglia", min: 1, max: 2, step: 0.05, get: () => P.threshold, set: v => P.threshold = v, fmt: v => `${v.toFixed(2)}× norma`,
-      help: "Sotto questo valore la stranezza resta a 0. La norma è la mediana delle sottomissioni 2006–2015 di ciascuna conferenza." }),
-    slider({ id: "sat", label: "Saturazione", min: 0.3, max: 3, step: 0.05, get: () => P.saturate, set: v => P.saturate = v, fmt: v => `max a ${(P.threshold + v).toFixed(2)}×`,
-      help: "Il valore, rispetto alla norma, a cui la stranezza arriva a 1. In scala comune è uguale per tutte e tre le conferenze." }),
-    el("div", { class: "ctl" }, [el("label", { text: "Scala della saturazione (audio singoli)" }),
-      segmented("satMode", "Scala della saturazione", [["common", "Comune"], ["own", "Per conferenza"]], () => P.satMode, v => { P.satMode = v; if (P.mode !== "chord") schedule("render"); })]),
-    el("p", { class: "help", text: "Per conferenza: la stranezza arriva a 1 nell'anno con più sottomissioni di quella conferenza, e il cursore Saturazione non viene usato. Nell'Accordo si usa sempre la scala comune." }),
-    slider({ id: "gamma", label: "Esponente (gamma)", min: 0.5, max: 3, step: 0.05, get: () => P.gamma, set: v => P.gamma = v, fmt: v => v.toFixed(2),
-      help: "Curva applicata alla stranezza. Con valori maggiori di 1 le variazioni piccole vengono attenuate e quelle grandi restano." })
+  section("From data to strangeness", [
+    slider({ id: "thr", label: "Threshold", min: 1, max: 2, step: 0.05, get: () => P.threshold, set: v => P.threshold = v, fmt: v => `${v.toFixed(2)}× baseline`,
+      help: "Below this value strangeness stays at 0. The baseline is the median of each conference's 2006–2015 submissions." }),
+    slider({ id: "sat", label: "Saturation", min: 0.3, max: 3, step: 0.05, get: () => P.saturate, set: v => P.saturate = v, fmt: v => `max at ${(P.threshold + v).toFixed(2)}×`,
+      help: "How far above the baseline strangeness reaches 1. On the shared scale it is the same for all three conferences." }),
+    el("div", { class: "ctl" }, [el("label", { text: "Saturation scale (single conferences)" }),
+      segmented("satMode", "Saturation scale", [["common", "Shared"], ["own", "Per conference"]], () => P.satMode, v => { P.satMode = v; if (P.mode !== "chord") schedule("render"); })]),
+    el("p", { class: "help", text: "Per conference: strangeness reaches 1 in that conference's peak year, and the Saturation slider is not used. The Chord always uses the shared scale." }),
+    slider({ id: "gamma", label: "Exponent (gamma)", min: 0.5, max: 3, step: 0.05, get: () => P.gamma, set: v => P.gamma = v, fmt: v => v.toFixed(2),
+      help: "Curve applied to strangeness. Values above 1 damp small deviations and keep large ones." })
   ]),
-  section("Voci", [
-    slider({ id: "ghost", label: "Voce fantasma", min: 0, max: 1, step: 0.05, get: () => P.ghost, set: v => P.ghost = v, fmt: v => v === 0 ? "spenta" : `${Math.round(v * 100)}%`,
-      help: "Una copia della stessa nota, senza effetti e a frequenza fissa per tutti i 20 anni. Fa da riferimento: rende udibile quanto la nota si allontana dal punto di partenza." }),
-    el("div", { class: "ctl" }, [el("label", { text: "Nota della conferenza singola" }),
-      segmented("base", "Nota", Object.entries(NOTES).map(([f, n]) => [parseFloat(f), n]), () => P.baseFreq, v => { P.baseFreq = v; if (P.mode !== "chord") schedule("render"); })]),
-    checkbox("breath", "Respiro lento (oscillazione di volume a 0,11 Hz, non legata ai dati)", () => P.breath, v => { P.breath = v; schedule("render"); }),
-    slider({ id: "partials", label: "Parziali", min: 8, max: 40, step: 1, get: () => P.partials, set: v => P.partials = v, fmt: v => `${v}`,
-      help: "Numero di componenti sinusoidali che formano ogni nota." })
+  section("Voices", [
+    slider({ id: "ghost", label: "Ghost voice", min: 0, max: 1, step: 0.05, get: () => P.ghost, set: v => P.ghost = v, fmt: v => v === 0 ? "off" : `${Math.round(v * 100)}%`,
+      help: "A copy of the same note, with no effects and a fixed pitch for all 20 years. It is the reference that makes audible how far the note has moved." }),
+    el("div", { class: "ctl" }, [el("label", { text: "Note for a single conference" }),
+      segmented("base", "Note", Object.entries(NOTES).map(([f, n]) => [parseFloat(f), n]), () => P.baseFreq, v => { P.baseFreq = v; if (P.mode !== "chord") schedule("render"); })]),
+    checkbox("breath", "Slow breathing (0.11 Hz volume swell, not tied to the data)", () => P.breath, v => { P.breath = v; schedule("render"); }),
+    slider({ id: "partials", label: "Partials", min: 8, max: 40, step: 1, get: () => P.partials, set: v => P.partials = v, fmt: v => `${v}`,
+      help: "Number of sine components that make up each note." })
   ])
 );
 
-const fxSection = section("Effetti di sintesi", [
-  el("p", { class: "help", text: "L'intensità di ogni effetto è profondità × stranezza: a 0 l'effetto è spento, a 1 raggiunge la profondità impostata qui." }),
+const fxSection = section("Synthesis effects", [
+  el("p", { class: "help", text: "Each effect's amount is depth × strangeness: at 0 the effect is off, at 1 it reaches the depth set here." }),
   el("div", { class: "row" }, [
-    el("button", { type: "button", class: "small", text: "Accendi tutte", onclick: () => { for (const k in P.fx) P.fx[k].on = true; syncAll(); schedule("render"); } }),
-    el("button", { type: "button", class: "small", text: "Valori iniziali", onclick: () => { Object.assign(P, JSON.parse(JSON.stringify({ ...DEFAULTS, view: P.view }))); syncAll(); schedule("render"); } })
+    el("button", { type: "button", class: "small", text: "Turn all on", onclick: () => { for (const k in P.fx) P.fx[k].on = true; syncAll(); schedule("render"); } }),
+    el("button", { type: "button", class: "small", text: "Reset to defaults", onclick: () => { Object.assign(P, JSON.parse(JSON.stringify({ ...DEFAULTS, view: P.view }))); syncAll(); schedule("render"); } })
   ])
 ], true);
 const fxBody = fxSection.querySelector(".group-body");
@@ -605,7 +605,7 @@ for (const [key, info] of Object.entries(FX_INFO)) {
   const solo = el("button", { type: "button", class: "small", text: "Solo", "aria-label": `Solo ${info.label}`,
     onclick: () => { for (const k in P.fx) P.fx[k].on = k === key; syncAll(); schedule("render"); } });
   cb.addEventListener("change", () => { P.fx[key].on = cb.checked; syncAll(); schedule("render"); });
-  const s = slider({ id: `amt-${key}`, label: "Profondità", min: info.min, max: info.max, step: info.step,
+  const s = slider({ id: `amt-${key}`, label: "Depth", min: info.min, max: info.max, step: info.step,
     get: () => P.fx[key].amt, set: v => P.fx[key].amt = v, fmt: info.fmt });
   const range = s.querySelector("input");
   updaters.push(() => { cb.checked = P.fx[key].on; box.classList.toggle("off", !P.fx[key].on); range.disabled = !P.fx[key].on; });
@@ -613,14 +613,14 @@ for (const [key, info] of Object.entries(FX_INFO)) {
   fxBody.append(box);
 }
 controls.append(fxSection);
-controls.append(section("Spettrogramma", [
-  el("div", { class: "ctl" }, [el("label", { text: "Scala delle frequenze" }),
-    segmented("fscale", "Scala delle frequenze", [[false, "Lineare"], [true, "Logaritmica"]], () => P.view.logFreq, v => { P.view.logFreq = v; buildAxes(); schedule("spec"); })]),
-  el("p", { class: "help", text: "Lineare: ogni Hz occupa lo stesso spazio, ed è la scala che mostra meglio l'inarmonicità. Logaritmica: ogni ottava occupa lo stesso spazio." }),
-  slider({ id: "fmax", label: "Frequenza massima", min: 1000, max: 12000, step: 500, get: () => P.view.fmax, set: v => { P.view.fmax = v; buildAxes(); }, fmt: v => `${(v / 1000).toLocaleString("it-IT")} kHz`, kind: "spec",
-    help: "Limite superiore dell'asse delle frequenze." }),
-  slider({ id: "dbr", label: "Gamma dinamica", min: 30, max: 110, step: 5, get: () => P.view.dbRange, set: v => P.view.dbRange = v, fmt: v => `${v} dB`, kind: "mesh",
-    help: "Intervallo di intensità mostrato, dal massimo verso il basso. Valori più alti rendono visibili anche le componenti deboli." })
+controls.append(section("Spectrogram", [
+  el("div", { class: "ctl" }, [el("label", { text: "Frequency scale" }),
+    segmented("fscale", "Frequency scale", [[false, "Linear"], [true, "Logarithmic"]], () => P.view.logFreq, v => { P.view.logFreq = v; buildAxes(); schedule("spec"); })]),
+  el("p", { class: "help", text: "Linear: every hertz takes the same space, the scale that shows inharmonicity best. Logarithmic: every octave takes the same space." }),
+  slider({ id: "fmax", label: "Maximum frequency", min: 1000, max: 12000, step: 500, get: () => P.view.fmax, set: v => { P.view.fmax = v; buildAxes(); }, fmt: v => `${(v / 1000).toLocaleString("en-US")} kHz`, kind: "spec",
+    help: "Upper limit of the frequency axis." }),
+  slider({ id: "dbr", label: "Dynamic range", min: 30, max: 110, step: 5, get: () => P.view.dbRange, set: v => P.view.dbRange = v, fmt: v => `${v} dB`, kind: "mesh",
+    help: "Intensity range shown, from the maximum down. Higher values reveal weaker components too." })
 ]));
 function syncAll() { updaters.forEach(f => f()); }
 syncAll();
@@ -630,7 +630,7 @@ let worker = null;
 try {
   const src = document.getElementById("synth-worker").textContent;
   worker = new Worker(URL.createObjectURL(new Blob([src], { type: "text/javascript" })));
-} catch (e) { setStatus("Il browser non permette di calcolare l'audio qui.", false); }
+} catch (e) { setStatus("This browser cannot compute the audio here.", false); }
 let busy = false, queued = null, jobId = 0, timer = null;
 function schedule(kind) {
   if (kind === "mesh") { updateMesh(); return; }
@@ -640,7 +640,7 @@ function schedule(kind) {
 function request(kind) {
   if (!worker) return;
   if (busy) { queued = queued === "render" || kind === "render" ? "render" : "spec"; return; }
-  busy = true; setStatus(kind === "render" ? "Calcolo dell'audio…" : "Calcolo dello spettrogramma…", true);
+  busy = true; setStatus(kind === "render" ? "Computing audio…" : "Computing spectrogram…", true);
   const id = ++jobId;
   if (kind === "render") worker.postMessage({ type: "render", id, p: JSON.parse(JSON.stringify(P)) });
   else worker.postMessage({ type: "spec", id, view: { ...P.view } });
@@ -655,7 +655,7 @@ if (worker) worker.onmessage = e => {
     else if (old) offset = Math.min(offset / old.dur * m.dur, m.dur);
   }
   spec = m.spec; updateMesh(); buildKeys(); buildMeters(); drawChart();
-  setStatus(`Pronto · calcolato in ${(m.ms / 1000).toLocaleString("it-IT", { maximumFractionDigits: 1 })} s`, false);
+  setStatus(`Ready · computed in ${(m.ms / 1000).toLocaleString("en-US", { maximumFractionDigits: 1 })} s`, false);
   if (queued) { const k = queued; queued = null; request(k); }
 };
 function setStatus(t, isBusy) {
@@ -693,7 +693,7 @@ function position() {
 }
 function setPlayIcon() {
   playIcon.innerHTML = playing ? '<path d="M5 3h4v14H5zM11 3h4v14h-4z"/>' : '<path d="M5 3l12 7-12 7z"/>';
-  playBtn.setAttribute("aria-label", playing ? "Pausa" : "Riproduci");
+  playBtn.setAttribute("aria-label", playing ? "Pause" : "Play");
 }
 playBtn.addEventListener("click", () => {
   if (!audio) return;
@@ -739,7 +739,7 @@ function buildMeters() {
   for (const n of NAMES) {
     const i = el("i"); i.style.background = voiceColor(n);
     const num = el("span", { class: "num", text: "0,00" });
-    const row = el("div", { class: "meter" + (curves[n] ? "" : " dim"), title: `Stranezza di ${n}` }, [el("span", { text: n }), el("div", { class: "bar" }, [i]), num]);
+    const row = el("div", { class: "meter" + (curves[n] ? "" : " dim"), title: `Strangeness of ${n}` }, [el("span", { text: n }), el("div", { class: "bar" }, [i]), num]);
     metersEl.append(row); meterEls[n] = { i, num };
   }
 }
@@ -757,7 +757,7 @@ function updateIndicators() {
   for (const n of NAMES) {
     const m = meterEls[n]; if (!m) continue;
     const v = curves[n] ? curves[n][j] : 0;
-    m.i.style.width = `${(v * 100).toFixed(1)}%`; m.num.textContent = v.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    m.i.style.width = `${(v * 100).toFixed(1)}%`; m.num.textContent = v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 }
 
@@ -780,7 +780,7 @@ function drawChart() {
   // assi inferiori
   const ss = v => bot1 - v * (bot1 - bot0);
   for (const v of [0, 1]) { cctx.beginPath(); cctx.moveTo(x0, ss(v)); cctx.lineTo(x1, ss(v)); cctx.stroke(); cctx.fillText(String(v), x0 - 6, ss(v)); }
-  cctx.save(); cctx.translate(10, (bot0 + bot1) / 2); cctx.rotate(-Math.PI / 2); cctx.textAlign = "center"; cctx.fillText("stran.", 0, 0); cctx.restore();
+  cctx.save(); cctx.translate(10, (bot0 + bot1) / 2); cctx.rotate(-Math.PI / 2); cctx.textAlign = "center"; cctx.fillText("strange", 0, 0); cctx.restore();
   // anni
   cctx.textAlign = "center"; cctx.textBaseline = "top";
   YEARS.forEach((y, i) => { if (y % 5 === 0 || i === 0) cctx.fillText(String(y), xs(i), bot1 + 6); });
@@ -828,7 +828,7 @@ function cm(t) {
 }
 function init3D() {
   if (!window.THREE || !THREE.OrbitControls) {
-    stage.innerHTML = '<p class="err">Non riesco a caricare la libreria 3D. Ricarica la pagina; l\'audio e il grafico dei dati funzionano comunque.</p>';
+    stage.innerHTML = '<p class="err">The 3D library could not load. Reload the page; audio and the data chart still work.</p>';
     return false;
   }
   const canvas = document.getElementById("gl");
@@ -892,9 +892,9 @@ function buildAxes() {
     seg.push(-W / 2, 0, z, -W / 2 - 0.18, 0, z);
     addLabel(hz >= 1000 ? `${hz / 1000}k` : String(hz), new THREE.Vector3(-W / 2 - 0.5, 0, z));
   }
-  addLabel("anno →", new THREE.Vector3(W / 2 + 0.9, 0, front + 0.55), "title");
-  addLabel("frequenza (Hz)", new THREE.Vector3(-W / 2 - 0.3, 0, -front - 1.35), "title");
-  addLabel("intensità", new THREE.Vector3(-W / 2, H * 1.15, -front), "title");
+  addLabel("year →", new THREE.Vector3(W / 2 + 0.9, 0, front + 0.55), "title");
+  addLabel("frequency (Hz)", new THREE.Vector3(-W / 2 - 0.3, 0, -front - 1.35), "title");
+  addLabel("intensity", new THREE.Vector3(-W / 2, H * 1.15, -front), "title");
   seg.push(-W / 2, 0, -front, -W / 2, H * 1.05, -front);
   const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(seg, 3));
   axisGroup.add(new THREE.LineSegments(g, mat));
@@ -1024,15 +1024,15 @@ function settingsJson() {
 function say(t) { toast.textContent = t; clearTimeout(say.t); say.t = setTimeout(() => toast.textContent = "", 4000); }
 document.getElementById("copyJson").addEventListener("click", () => {
   const txt = settingsJson();
-  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(() => say("Impostazioni copiate."), () => say("Copia non permessa qui. Usa «Salva impostazioni»."));
-  else say("Copia non permessa qui. Usa «Salva impostazioni».");
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(() => say("Settings copied."), () => say("Copying is not allowed here. Use Save settings."));
+  else say("Copying is not allowed here. Use Save settings.");
 });
 const saveBtn = document.getElementById("saveJson");
 let downloads = null;
 saveBtn.addEventListener("click", async () => {
-  if (!downloads) { say("Il salvataggio non è disponibile in questa vista. Usa «Copia impostazioni»."); return; }
-  try { await downloads.save({ filename: "impostazioni.json", data: settingsJson() }); say("Impostazioni salvate."); }
-  catch (e) { if (e && e.code !== "declined") say("Salvataggio non riuscito. Usa «Copia impostazioni»."); }
+  if (!downloads) { say("Saving is not available in this view. Use Copy settings."); return; }
+  try { await downloads.save({ filename: "settings.json", data: settingsJson() }); say("Settings saved."); }
+  catch (e) { if (e && e.code !== "declined") say("Saving failed. Use Copy settings."); }
 });
 if (window.claude && window.claude.use) window.claude.use("downloads").then(d => { downloads = d; if (!d) saveBtn.hidden = true; }).catch(() => { saveBtn.hidden = true; });
 else saveBtn.hidden = true;
