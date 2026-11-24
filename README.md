@@ -24,6 +24,40 @@ It has two pages: **Anatomy of Strangeness**, a step-by-step tutorial on how the
 4. **Ghost voice**: the starting note with no effects, added after wavefolding.
 5. **Mix**: a chord of ICSE 110 Hz, FSE 165 Hz, ASE 220 Hz (a just fifth and an octave), stereo panning, and a yearly beat with an accent every 5 years.
 
+## Tutorial
+
+The tutorial opens one step at a time: each step unlocks the next when you press "Got it", and the steps not reached yet stay hidden. A **Glossary** link in the header opens a side panel with every concept used (strangeness, partials, cents, beating, inharmonicity, intermodulation, aliasing and more), each with a fuller explanation and an example. Every step lists its own concepts as links to the matching entries.
+
+### Quiz
+
+The Listening step ends with a quiz that asks which effect you hear. It has four modes.
+
+| Mode | What it does |
+|---|---|
+| Free practice | Random questions with no end. |
+| Round of 10 | Each of the five effects appears exactly twice, in random order. At the end it shows your score for each effect, so you can see which ones you confuse. |
+| Levels | Five levels of increasing difficulty, four questions each. Three correct answers unlock the next level; fewer restart the level. |
+| Adaptive | Random questions, but mistakes bring an effect back until it is learned (see below). The quiz ends when every effect is learned. |
+
+In free practice, the round and the adaptive mode the listening is always the same: a 6-second ramp of strangeness from 0 to 1 on A3 (220 Hz), with the ghost voice on and a single effect at its default depth (detune 90 cents, jitter ±20 cents, inharmonicity B = 2.5‰, spectral tilt T = 1.2, wavefolding G = 5).
+
+The five levels are:
+
+1. **With a reference**: one effect at full depth, ghost voice on.
+2. **No reference**: one effect at full depth, no ghost voice.
+3. **Subtle**: one effect at half depth, ghost voice on.
+4. **Two at once**: two effects together; both must be named.
+5. **In the piece**: the last six years of the full chord, first complete (A), then with one effect missing (B); name the missing effect.
+
+The adaptive mode keeps a debt for each effect:
+
+- a wrong answer adds 2 to the debt of the effect that was playing, and 1 to the debt of the effect you picked by mistake, since the two are being confused;
+- a right answer removes 1 from the debt of that effect;
+- three times out of four, the next question is drawn among the effects with a debt, in proportion to it; otherwise it is drawn among the effects not yet learned;
+- an effect counts as learned once it has no debt and has been recognised twice in a row.
+
+A wrong answer therefore brings an effect back at least twice more, and one that keeps being confused with another keeps returning until it is recognised reliably.
+
 ## Usage
 
 Render the WAV files with the default settings (the chord and each conference on its own):
