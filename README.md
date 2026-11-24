@@ -1,23 +1,29 @@
 # Off Key
 
+<img src="assets/logo.svg" alt="Off Key logo" width="72">
+
 *An anatomy of strangeness in conference submissions.*
 
 Off Key is a sonification of submissions to ICSE, FSE and ASE from 2006 to 2025. Each conference is a note. The further a year's submissions drift from the historical baseline (their median over a baseline period, 2006–2015 by default), the more the note warps out of tune, until the chord no longer sounds right.
 
-It has two pages: **Anatomy of Strangeness**, a step-by-step tutorial on how the sound is built, and **Submissions in Sound**, the full tool.
+A welcome page plays the piece and offers two ways in: **Anatomy of Strangeness**, a step-by-step tutorial on how the sound is built, and **Submissions in Sound**, the full tool.
 
-**Live site:** https://carmenaarmenti.github.io/off-key/ (the tutorial; its last step opens the tool at `lab.html`).
+The logo is a sine wave passed through the model's own wavefolding, with strangeness rising from 0 on the left to 1 on the right. While the preview plays, the fold grows with the piece.
+
+**Live site:** https://carmenaarmenti.github.io/off-key/ (the welcome page; the tutorial is at `tutorial.html`, the tool at `lab.html`).
 
 ## Files
 
 | File | Contents |
 |---|---|
+| `welcome.html` | The home page: what Off Key is about, a preview of the piece, and links to the tutorial and the tool |
 | `tutorial.html` | "Anatomy of Strangeness": a slide tutorial, one effect per slide, with audio experiments on a single note and a recognition quiz. Its first step accepts your own three series as CSV (`year,<name>,<name>,<name>`, one row per consecutive year) |
 | `glossary.html` | The glossary: one page per concept, with narrower ideas as its sections, and an index of all concepts |
 | `glossary-data.js` | The concepts themselves, shared by the tutorial (for its links) and the glossary page |
 | `lab.html` | The full tool: every parameter, a 3D spectrogram, a Pitch view, a time bar, and settings you can save to and load from a JSON file |
+| `assets/` | The logo (`logo.svg`, also the favicon) and the preview played on the welcome page (`off-key-chord.m4a`, the default chord rendered by `sonify.py` and encoded with `afconvert -f m4af -d aac -b 128000`) |
 | `sonify.py` | Renders WAV files with the same model, reading settings exported from the tool |
-| `build.sh` | Packages the two pages, either for claude.ai or, with `--site`, for an ordinary web host |
+| `build.sh` | Packages the pages, either for claude.ai or, with `--site`, for an ordinary web host; the welcome page becomes `index.html` |
 | `.github/workflows/pages.yml` | Builds the site and publishes it to GitHub Pages on every push to `main` |
 
 ## Model
@@ -31,7 +37,7 @@ It has two pages: **Anatomy of Strangeness**, a step-by-step tutorial on how the
 
 ## Tutorial
 
-The tutorial opens one step at a time: each step unlocks the next when you press "Got it", and the steps not reached yet stay hidden. A **Glossary** link in the header opens the glossary page. Every step lists its own concepts as links; each link opens the page of that concept only, with its explanation, an example and its narrower ideas as sections (for instance *Strangeness* holds baseline, threshold, saturation, exponent γ and smoothing). A link to one of those narrower ideas opens the concept it belongs to, at that section. **Back to the tutorial** returns to the step you came from. The tool has the same link back to the tutorial.
+The tutorial opens one step at a time: each step unlocks the next when you press "Got it", and the steps not reached yet stay hidden. A **Glossary** link in the header opens the glossary page. Every step lists its own concepts as links; each link opens the page of that concept only, with its explanation, an example and its narrower ideas as sections (for instance *Strangeness* holds baseline, threshold, saturation, exponent γ and smoothing). A link to one of those narrower ideas opens the concept it belongs to, at that section. **Back to the tutorial** returns to the step you came from. The tool has the same link back to the tutorial. The title in the header of every page leads back to the welcome page.
 
 ### Quiz
 
