@@ -295,11 +295,21 @@ function render(p) {
   const fadeN = Math.round(0.4 * SR);
 
   // ghost voice wavetable: the same note, clean and unchanging
-  const TB = 4096, table = new Float32Array(TB);
-  for (let k = 1; k <= NP; k++) { const a = Math.pow(k, -2.2); for (let i = 0; i < TB; i++) table[i] += a * Math.sin(TWO_PI * k * i / TB); }
-  let tm = 0; for (let i = 0; i < TB; i++) tm = Math.max(tm, Math.abs(table[i])); for (let i = 0; i < TB; i++) table[i] /= tm;
+  // ghost voice wavetable: the clean note, built with the same partial phases as the note it follows,
+  // so that at s = 0 note and ghost have exactly the same waveform
+  const TB = 4096;
+  const ghostTable = phases => {
+    const table = new Float32Array(TB);
+    for (let k = 1; k <= NP; k++) { const a = Math.pow(k, -2.2), ph = TWO_PI * phases[k]; for (let i = 0; i < TB; i++) table[i] += a * Math.sin(TWO_PI * k * i / TB + ph); }
+    let tm = 0; for (let i = 0; i < TB; i++) tm = Math.max(tm, Math.abs(table[i])); for (let i = 0; i < TB; i++) table[i] /= tm || 1;
+    return table;
+  };
 
   for (const vc of voices) {
+    // phases depend only on the voice's position, so every render of the same voice uses the same ones
+    const prng = mulberry32(1000 + voices.indexOf(vc));
+    const phases = new Float64Array(NP + 1); for (let k = 1; k <= NP; k++) phases[k] = prng();
+    const table = ghostTable(phases);
     let s = new Float32Array(n);
     if (p.source === "ramp") { for (let i = 0; i < n; i++) s[i] = i / (n - 1); }
     else {
@@ -332,7 +342,7 @@ function render(p) {
     }
     const x = new Float32Array(n);
     for (let k = 1; k <= NP; k++) {
-      let ph = rng(); const k2 = k * k, lk = Math.log(k), base = Math.pow(k, -2.2);
+      let ph = phases[k]; const k2 = k * k, lk = Math.log(k), base = Math.pow(k, -2.2);
       const fkAt = b => Bm > 0 ? k * fC[b] * Math.sqrt(1 + Bm * sC[b] * k2) : k * fC[b];
       const ampAt = (b, fk) => fk >= nyq ? 0 : (br > 0 ? base * Math.exp(br * sC[b] * lk) : base);
       let fa = fkAt(0), aa = ampAt(0, fa);

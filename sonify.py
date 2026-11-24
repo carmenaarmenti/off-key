@@ -97,7 +97,11 @@ def render(p):
     L = np.zeros(n)
     R = np.zeros(n)
     fade = np.minimum(1, i / (0.4 * sr))
-    for name, f0, pan, sign in voices:
+    for vi, (name, f0, pan, sign) in enumerate(voices):
+        # one phase per partial, shared by the note and its ghost voice,
+        # so that at s = 0 they have exactly the same waveform
+        # (they depend only on the voice's position, so every render of the same voice uses the same ones)
+        phases = np.random.default_rng(1000 + vi).uniform(size=p["partials"] + 1)
         if p["source"] == "ramp":
             s = i / (n - 1)
         else:
@@ -115,7 +119,7 @@ def render(p):
         for k in range(1, p["partials"] + 1):
             fk = k * f * np.sqrt(1 + B * s * k * k)
             amp = np.where(fk < 0.45 * sr, k ** (-2.2 + br * s), 0.0)
-            x += amp * np.sin(2 * np.pi * (np.cumsum(fk) / sr + rng.uniform()))
+            x += amp * np.sin(2 * np.pi * (np.cumsum(fk) / sr + phases[k]))
         x /= np.abs(x).max()
         if fold > 0:
             x = (1 - s) * x + s * np.sin(np.pi / 2 * (1 + fold * s) * x)
@@ -123,7 +127,8 @@ def render(p):
             x *= 0.6 + 0.4 * np.sin(2 * np.pi * 0.11 * t + f0) ** 2
 
         if p["ghost"] > 0:   # the same note, clean and unchanging
-            g = sum(k ** -2.2 * np.sin(2 * np.pi * k * f0 * t) for k in range(1, p["partials"] + 1))
+            tg = (i + 1) / sr   # same time base as the cumulative phase of the note
+            g = sum(k ** -2.2 * np.sin(2 * np.pi * (k * f0 * tg + phases[k])) for k in range(1, p["partials"] + 1))
             x += p["ghost"] * g / np.abs(g).max()
         x *= fade
         L += x * np.sqrt((1 - pan) / 2)

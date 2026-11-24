@@ -231,11 +231,21 @@ function render(job) {
   const rng = mulberry32(job.seed || 7);
   const gauss = () => { let u = 0; while (u === 0) u = rng(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rng()); };
   const fx = job.fx, NP = job.partials, nyq = 0.45 * sr, TWO_PI = 2 * Math.PI, BS = 32, nb = Math.ceil(n / BS);
-  const TB = 4096, table = new Float32Array(TB);
-  for (let k = 1; k <= NP; k++) { const a = Math.pow(k, -2.2); for (let i = 0; i < TB; i++) table[i] += a * Math.sin(TWO_PI * k * i / TB); }
-  let tm = 0; for (let i = 0; i < TB; i++) tm = Math.max(tm, Math.abs(table[i])); for (let i = 0; i < TB; i++) table[i] /= tm || 1;
+  // ghost voice wavetable: the clean note, built with the same partial phases as the note it follows,
+  // so that at s = 0 note and ghost have exactly the same waveform
+  const TB = 4096;
+  const ghostTable = phases => {
+    const table = new Float32Array(TB);
+    for (let k = 1; k <= NP; k++) { const a = Math.pow(k, -2.2), ph = TWO_PI * phases[k]; for (let i = 0; i < TB; i++) table[i] += a * Math.sin(TWO_PI * k * i / TB + ph); }
+    let tm = 0; for (let i = 0; i < TB; i++) tm = Math.max(tm, Math.abs(table[i])); for (let i = 0; i < TB; i++) table[i] /= tm || 1;
+    return table;
+  };
   for (const vc of job.voices) {
     const s = sCurve(vc.s, n, sr);
+    // phases depend only on the voice's position, so every render of the same voice uses the same ones
+    const prng = mulberry32(1000 + job.voices.indexOf(vc));
+    const phases = new Float64Array(NP + 1); for (let k = 1; k <= NP; k++) phases[k] = prng();
+    const table = ghostTable(phases);
     const gl = Math.sqrt((1 - vc.pan) / 2), gr = Math.sqrt((1 + vc.pan) / 2);
     let x = null;
     if (vc.note !== false) {
@@ -255,7 +265,7 @@ function render(job) {
       const B = fx.inharm / 1000, T = fx.bright;
       x = new Float32Array(n);
       for (let k = 1; k <= NP; k++) {
-        let ph = rng(); const k2 = k * k, lk = Math.log(k), base = Math.pow(k, -2.2);
+        let ph = phases[k]; const k2 = k * k, lk = Math.log(k), base = Math.pow(k, -2.2);
         const gate = b => job.buildup ? Math.max(0, Math.min(1, (b * BS / sr - (k - 1) * job.buildup) / 0.06)) : 1;
         const fkAt = b => B > 0 ? k * fC[b] * Math.sqrt(1 + B * sC[b] * k2) : k * fC[b];
         const ampAt = (b, fk) => fk >= nyq ? 0 : (T > 0 ? base * Math.exp(T * sC[b] * lk) : base) * gate(b);
