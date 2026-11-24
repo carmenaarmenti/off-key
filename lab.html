@@ -1,0 +1,1006 @@
+<meta charset="utf-8">
+<title>Sottomissioni in Suono</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: banco di lavoro a due colonne. A sinistra il pannello dei parametri, a destra il trasporto, lo spettrogramma 3D e il grafico dei dati. Su telefono si impila. */
+:root {
+  --bg: #eef0f5;
+  --panel: #ffffff;
+  --ink: #161827;
+  --muted: #5b6075;
+  --line: #d8dbe6;
+  --accent: #5847d6;
+  --accent-ink: #ffffff;
+  --plot-bg: #e6e8f0;
+  --icse: #d4473a;
+  --fse: #13917f;
+  --ase: #c47a0c;
+  --cm0: #dcdcec;
+  --cm1: #8a7fe0;
+  --cm2: #b8388d;
+  --cm3: #ee7d32;
+  --cm4: #ffd463;
+  --font-text: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1017; --panel: #161925; --ink: #e7e8f0; --muted: #9298ad; --line: #292e3d;
+    --accent: #9b8cff; --accent-ink: #12101f; --plot-bg: #0a0c12;
+    --icse: #ff6f61; --fse: #3fcab6; --ase: #f2aa3c;
+    --cm0: #191b2c; --cm1: #4a3ca8; --cm2: #b2338a; --cm3: #f07f35; --cm4: #ffe08a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1017; --panel: #161925; --ink: #e7e8f0; --muted: #9298ad; --line: #292e3d;
+  --accent: #9b8cff; --accent-ink: #12101f; --plot-bg: #0a0c12;
+  --icse: #ff6f61; --fse: #3fcab6; --ase: #f2aa3c;
+  --cm0: #191b2c; --cm1: #4a3ca8; --cm2: #b2338a; --cm3: #f07f35; --cm4: #ffe08a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-text); font-size: 14px; line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 40px;
+}
+.wrap { max-width: 1400px; margin: 0 auto; display: grid; gap: 20px; }
+header h1 { font-size: 1.7rem; font-weight: 700; letter-spacing: -0.02em; margin: 0; text-wrap: balance; }
+header p { margin: 4px 0 0; color: var(--muted); max-width: 70ch; }
+.layout { display: grid; grid-template-columns: 330px minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 920px) { .layout { grid-template-columns: minmax(0, 1fr); } .controls { order: 2; position: static !important; max-height: none !important; } }
+.controls {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 4px 16px 16px;
+  position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); max-height: calc(100vh - 24px); overflow: auto;
+}
+.main { display: grid; gap: 14px; min-width: 0; }
+fieldset { border: 0; border-top: 1px solid var(--line); margin: 0; padding: 14px 0 4px; display: grid; gap: 12px; }
+fieldset:first-of-type { border-top: 0; }
+legend { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding: 0; float: left; width: 100%; margin-bottom: 2px; }
+.ctl { display: grid; gap: 4px; }
+.ctl-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.ctl label { font-weight: 500; }
+.val { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
+input[type="range"]:disabled { opacity: 0.35; }
+.help { font-size: 0.78rem; color: var(--muted); margin: 0; }
+.fx { border: 1px solid var(--line); border-radius: 8px; padding: 10px; display: grid; gap: 6px; }
+.fx.off { opacity: 0.6; }
+.fx-head { display: flex; align-items: center; gap: 8px; }
+.fx-head label { font-weight: 600; flex: 1; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.fx-head input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px; margin: 0; }
+button, select {
+  font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+  padding: 5px 10px; cursor: pointer;
+}
+button:hover, select:hover { border-color: var(--muted); }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.small { font-size: 0.75rem; padding: 2px 8px; }
+.seg { display: flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; width: fit-content; max-width: 100%; }
+.seg button { border: 0; border-radius: 0; border-right: 1px solid var(--line); padding: 6px 12px; background: transparent; }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.check { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.check input { accent-color: var(--accent); margin: 0; }
+
+.transport {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px;
+  display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: center;
+}
+.play {
+  width: 52px; height: 52px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); border: 0;
+  display: grid; place-items: center; flex: none;
+}
+.play svg { width: 20px; height: 20px; fill: currentColor; }
+.year { font-family: var(--font-mono); font-size: 2.4rem; font-weight: 500; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; line-height: 1; }
+.year small { display: block; font-family: var(--font-text); font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
+.meters { display: grid; gap: 5px; min-width: 200px; flex: 1; }
+.meter { display: grid; grid-template-columns: 40px minmax(0, 1fr) 40px; gap: 8px; align-items: center; font-size: 0.78rem; }
+.meter .bar { height: 8px; background: var(--plot-bg); border-radius: 4px; overflow: hidden; }
+.meter .bar i { display: block; height: 100%; width: 0; border-radius: 4px; }
+.meter .num { font-family: var(--font-mono); text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+.meter.dim { opacity: 0.3; }
+.status { font-size: 0.8rem; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--fse); }
+.status.busy .dot { background: var(--ase); animation: pulse 0.8s infinite alternate; }
+@keyframes pulse { to { opacity: 0.3; } }
+@media (prefers-reduced-motion: reduce) { .status.busy .dot { animation: none; } }
+
+.stage { position: relative; background: var(--plot-bg); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; height: clamp(340px, 58vh, 620px); }
+.stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.labels span { position: absolute; left: 0; top: 0; font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted); white-space: nowrap; }
+.labels span.title { font-family: var(--font-text); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; }
+.stage-tools { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; pointer-events: none; }
+.stage-tools > * { pointer-events: auto; }
+.stage-tools .seg { background: var(--panel); }
+.hint { font-size: 0.72rem; color: var(--muted); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; }
+.legend-cm { position: absolute; right: 12px; bottom: 12px; display: flex; align-items: center; gap: 6px; font-size: 0.7rem; color: var(--muted); font-family: var(--font-mono); }
+.legend-cm i { width: 90px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--cm0), var(--cm1), var(--cm2), var(--cm3), var(--cm4)); }
+
+.timeline { display: flex; align-items: flex-start; gap: 10px; margin-top: -4px; }
+.step { width: 34px; height: 34px; padding: 0; display: grid; place-items: center; flex: none; border-radius: 50%; }
+.step svg { width: 14px; height: 14px; fill: currentColor; }
+.tl-track { flex: 1; min-width: 0; padding-top: 7px; }
+#scrub { display: block; height: 20px; }
+.tl-ticks { position: relative; height: 26px; margin: 0 8px; }
+.tl-ticks span { position: absolute; top: 0; width: 1px; height: 5px; background: var(--muted); opacity: 0.5; }
+.tl-ticks span.major { height: 8px; opacity: 1; }
+.tl-ticks b { position: absolute; top: 10px; transform: translateX(-50%); font: 400 0.7rem var(--font-mono); color: var(--muted); }
+.help.read { max-width: 80ch; margin-top: -6px; }
+.chart { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; display: grid; gap: 8px; }
+.chart-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: baseline; }
+.chart-head h2 { font-size: 0.95rem; margin: 0; }
+.keys { display: flex; flex-wrap: wrap; gap: 14px; font-size: 0.78rem; color: var(--muted); }
+.keys span { display: inline-flex; align-items: center; gap: 6px; }
+.keys i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+#chart { width: 100%; height: 230px; display: block; cursor: pointer; }
+.foot { font-size: 0.78rem; color: var(--muted); display: grid; gap: 8px; }
+.foot a { color: var(--accent); }
+.export { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+#toast { font-size: 0.78rem; color: var(--muted); }
+.err { padding: 24px; color: var(--muted); }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Sottomissioni in Suono</h1>
+    <p>ICSE, FSE e ASE, 2006–2025. Ogni conferenza è una nota. Più il numero di sottomissioni si allontana dalla norma storica, più la nota si deforma. Muovi i parametri, ascolta e guarda lo spettrogramma cambiare.</p>
+  </header>
+
+  <div class="layout">
+    <aside class="controls" id="controls" aria-label="Parametri"></aside>
+
+    <section class="main">
+      <div class="transport">
+        <button class="play" id="play" aria-label="Riproduci"><svg viewBox="0 0 20 20" id="playIcon"><path d="M5 3l12 7-12 7z"/></svg></button>
+        <div class="year" id="year">2006<small>anno in ascolto</small></div>
+        <div class="meters" id="meters"></div>
+        <div class="status" id="status"><span class="dot"></span><span id="statusText">Calcolo…</span></div>
+      </div>
+
+      <div class="stage" id="stage">
+        <canvas id="gl" aria-label="Spettrogramma 3D: tempo, frequenza e intensità"></canvas>
+        <div class="labels" id="labels"></div>
+        <div class="stage-tools">
+          <div class="seg" id="views" role="group" aria-label="Vista">
+            <button data-view="persp" aria-pressed="true">Prospettiva</button>
+            <button data-view="top" aria-pressed="false">Dall'alto</button>
+            <button data-view="side" aria-pressed="false">Profilo</button>
+            <button data-view="bars" aria-pressed="false">Barre</button>
+          </div>
+          <span class="hint">Trascina per ruotare · rotella per zoom · tasto destro per spostare</span>
+        </div>
+        <div class="legend-cm">debole <i></i> forte</div>
+      </div>
+
+      <div class="timeline">
+        <button type="button" id="prevYear" class="step" aria-label="Anno precedente"><svg viewBox="0 0 20 20"><path d="M13 4L6 10l7 6z"/></svg></button>
+        <div class="tl-track">
+          <input type="range" id="scrub" min="0" max="1000" step="1" value="0" aria-label="Posizione nel tempo">
+          <div class="tl-ticks" id="ticks" aria-hidden="true"></div>
+        </div>
+        <button type="button" id="nextYear" class="step" aria-label="Anno successivo"><svg viewBox="0 0 20 20"><path d="M7 4l7 6-7 6z"/></svg></button>
+      </div>
+      <p class="help read">Come leggere lo spettrogramma: da sinistra a destra il tempo (anni), in profondità la frequenza, in altezza l'intensità. Ogni cresta è una parziale del suono. Creste dritte e parallele indicano un suono armonico e stabile. Creste curve, irregolari o diffuse indicano l'effetto di detune, inarmonicità e wavefolding. Nella vista Barre ogni barra è un anno e ogni fila, dal fondo verso il davanti, è una fascia di frequenze (dalle gravi alle acute). L'altezza della barra è l'intensità media di quella fascia nell'anno, e l'anno in ascolto è evidenziato. Con il cursore qui sopra ti sposti nel tempo.</p>
+
+      <div class="chart">
+        <div class="chart-head">
+          <h2>I dati e la stranezza che ne deriva</h2>
+          <div class="keys" id="keys"></div>
+        </div>
+        <canvas id="chart" aria-label="Sottomissioni per anno e curva di stranezza. Clicca per saltare a un anno."></canvas>
+        <p class="help">In alto le sottomissioni per anno. In basso la stranezza (0–1) calcolata con i parametri attuali. Clicca un anno per saltare lì.</p>
+      </div>
+
+      <div class="foot">
+        <div class="export">
+          <button id="saveJson">Salva impostazioni (.json)</button>
+          <button id="copyJson">Copia impostazioni</button>
+          <span id="toast"></span>
+        </div>
+        <p>Le impostazioni salvate si usano con <code>python3 sonify.py impostazioni.json</code> per ottenere il WAV ad alta qualità. Il suono di questa pagina e quello dello script coincidono nella struttura, non campione per campione.</p>
+        <p>Dati: <a href="https://github.com/emeryberger/csconferences" target="_blank" rel="noopener">emeryberger/csconferences</a>; FSE 2006–2010 da <a href="https://taoxie.cs.illinois.edu/seconferences.htm" target="_blank" rel="noopener">Tao Xie, SE conference statistics</a>.</p>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script id="synth-worker" type="javascript/worker">
+const YEARS = []; for (let y = 2006; y <= 2025; y++) YEARS.push(y);
+const DATA = {
+  ICSE: [395,334,371,405,380,441,408,461,496,452,530,415,502,529,617,615,691,780,1049,1150],
+  FSE:  [125,251,152,217,169,203,201,251,273,291,266,295,295,303,360,407,449,465,474,515],
+  ASE:  [121,312,280,220,190,252,138,254,276,289,284,367,386,448,395,440,531,633,587,1181]
+};
+const CHORD = [
+  { name: "ICSE", f0: 110.00, pan: -0.7, dir: -1 },
+  { name: "FSE",  f0: 165.00, pan:  0.0, dir:  1 },
+  { name: "ASE",  f0: 220.00, pan:  0.7, dir:  1 }
+];
+const BASE_END = 2015;
+const SINN = 8192, SIN = new Float32Array(SINN + 1);
+for (let i = 0; i <= SINN; i++) SIN[i] = Math.sin(2 * Math.PI * i / SINN);
+let lastMono = null, lastSR = 44100;
+
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function boxPass(src, dst, r) {
+  const n = src.length, w = 2 * r + 1; let acc = 0;
+  for (let j = -r; j <= r; j++) acc += src[Math.min(n - 1, Math.max(0, j))];
+  for (let i = 0; i < n; i++) { dst[i] = acc / w; acc += src[Math.min(n - 1, i + r + 1)] - src[Math.max(0, i - r)]; }
+}
+function smooth(a, sigma) {
+  if (sigma < 1) return a;
+  const r = Math.floor(Math.round(Math.sqrt(4 * sigma * sigma + 1)) / 2);
+  let A = a, B = new Float32Array(a.length);
+  for (let k = 0; k < 3; k++) { boxPass(A, B, r); const t = A; A = B; B = t; }
+  return A;
+}
+function median(arr) { const s = arr.slice().sort((a, b) => a - b); const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; }
+function anomaly(vals, p) {
+  const norm = median(vals.filter((_, i) => YEARS[i] <= BASE_END));
+  // saturazione per conferenza (solo audio singoli): la stranezza vale 1 nell'anno di picco
+  const sat = p.satMode === "own" && p.mode !== "chord"
+    ? Math.max(0.05, Math.max(...vals) / norm - p.threshold) : p.saturate;
+  return vals.map(v => Math.min(1, Math.max(0, (v / norm - p.threshold) / sat)));
+}
+
+function render(p) {
+  const SR = p.sr, spy = p.secPerYear, NY = YEARS.length;
+  const n = Math.round(NY * spy * SR);
+  const voices = p.mode === "chord" ? CHORD : [{ name: p.mode, f0: p.baseFreq, pan: 0, dir: 1 }];
+  const L = new Float32Array(n), R = new Float32Array(n);
+  const rng = mulberry32(7);
+  const gauss = () => { let u = 0; while (u === 0) u = rng(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rng()); };
+  const fx = p.fx, curves = {};
+  const det = fx.detune.on ? fx.detune.amt : 0;
+  const jit = fx.jitter.on ? fx.jitter.amt : 0;
+  const Bm = fx.inharm.on ? fx.inharm.amt / 1000 : 0;
+  const br = fx.bright.on ? fx.bright.amt : 0;
+  const fold = fx.fold.on ? fx.fold.amt : 0;
+  const NP = p.partials, nyq = 0.45 * SR, TWO_PI = 2 * Math.PI;
+  const fadeN = Math.round(0.4 * SR);
+
+  // tavola della voce fantasma: la stessa nota, pura e immobile
+  const TB = 4096, table = new Float32Array(TB);
+  for (let k = 1; k <= NP; k++) { const a = Math.pow(k, -2.2); for (let i = 0; i < TB; i++) table[i] += a * Math.sin(TWO_PI * k * i / TB); }
+  let tm = 0; for (let i = 0; i < TB; i++) tm = Math.max(tm, Math.abs(table[i])); for (let i = 0; i < TB; i++) table[i] /= tm;
+
+  for (const vc of voices) {
+    let s = new Float32Array(n);
+    if (p.source === "ramp") { for (let i = 0; i < n; i++) s[i] = i / (n - 1); }
+    else {
+      const an = anomaly(DATA[vc.name], p);
+      for (let i = 0; i < n; i++) {
+        const ty = i / SR / spy - 0.5, k = Math.floor(ty);
+        s[i] = ty <= 0 ? an[0] : k >= NY - 1 ? an[NY - 1] : an[k] + (an[k + 1] - an[k]) * (ty - k);
+      }
+      s = smooth(s, 0.25 * spy * SR);
+      for (let i = 0; i < n; i++) s[i] = Math.pow(Math.max(0, s[i]), p.gamma);
+    }
+    const cv = new Float32Array(400);
+    for (let j = 0; j < 400; j++) cv[j] = s[Math.min(n - 1, Math.round(j / 399 * (n - 1)))];
+    curves[vc.name] = cv;
+
+    // parametri lenti calcolati ogni BS campioni (control rate) e interpolati
+    const BS = 32, nb = Math.ceil(n / BS);
+    const sC = new Float32Array(nb + 1), fC = new Float32Array(nb + 1);
+    for (let b = 0; b <= nb; b++) sC[b] = s[Math.min(n - 1, b * BS)];
+    let jn = null;
+    if (jit > 0) {
+      jn = new Float32Array(nb + 1); for (let b = 0; b <= nb; b++) jn[b] = gauss();
+      jn = smooth(jn, 0.03 * SR / BS);
+      let m = 0; for (let b = 0; b <= nb; b++) m = Math.max(m, Math.abs(jn[b]));
+      for (let b = 0; b <= nb; b++) jn[b] /= (m || 1);
+    }
+    for (let b = 0; b <= nb; b++) {
+      let c = vc.dir * det * sC[b]; if (jn) c += jit * jn[b] * sC[b];
+      fC[b] = vc.f0 * Math.pow(2, c / 1200);
+    }
+    const x = new Float32Array(n);
+    for (let k = 1; k <= NP; k++) {
+      let ph = rng(); const k2 = k * k, lk = Math.log(k), base = Math.pow(k, -2.2);
+      const fkAt = b => Bm > 0 ? k * fC[b] * Math.sqrt(1 + Bm * sC[b] * k2) : k * fC[b];
+      const ampAt = (b, fk) => fk >= nyq ? 0 : (br > 0 ? base * Math.exp(br * sC[b] * lk) : base);
+      let fa = fkAt(0), aa = ampAt(0, fa);
+      for (let b = 0; b < nb; b++) {
+        const fb = fkAt(b + 1), ab = ampAt(b + 1, fb);
+        const i0 = b * BS, i1 = Math.min(n, i0 + BS), len = i1 - i0;
+        if (aa === 0 && ab === 0) { ph += (fa + fb) / 2 / SR * len; ph -= Math.floor(ph); fa = fb; aa = ab; continue; }
+        let inc = fa / SR, amp = aa;
+        const dinc = (fb - fa) / SR / len, damp = (ab - aa) / len;
+        for (let i = i0; i < i1; i++) {
+          const p = ph * SINN, j = p | 0;
+          x[i] += amp * (SIN[j] + (SIN[j + 1] - SIN[j]) * (p - j));
+          ph += inc; if (ph >= 1) ph -= 1;
+          inc += dinc; amp += damp;
+        }
+        fa = fb; aa = ab;
+      }
+    }
+    let m = 0; for (let i = 0; i < n; i++) m = Math.max(m, Math.abs(x[i])); m = m || 1;
+    const gl = Math.sqrt((1 - vc.pan) / 2), gr = Math.sqrt((1 + vc.pan) / 2);
+    let gph = 0; const ginc = vc.f0 / SR * TB;
+    for (let i = 0; i < n; i++) {
+      let v = x[i] / m;
+      if (fold > 0) { const si = s[i]; v = (1 - si) * v + si * Math.sin(Math.PI / 2 * (1 + fold * si) * v); }
+      if (p.breath) { const sn = Math.sin(TWO_PI * 0.11 * i / SR + vc.f0); v *= 0.6 + 0.4 * sn * sn; }
+      if (p.ghost > 0) {
+        const gi = gph | 0, gf = gph - gi;
+        v += p.ghost * (table[gi] + (table[(gi + 1) % TB] - table[gi]) * gf);
+        gph += ginc; if (gph >= TB) gph -= TB;
+      }
+      if (i < fadeN) v *= i / fadeN;
+      L[i] += v * gl; R[i] += v * gr;
+    }
+  }
+  let peak = 0; for (let i = 0; i < n; i++) peak = Math.max(peak, Math.abs(L[i]), Math.abs(R[i]));
+  const g = 0.85 / (peak || 1);
+  const mono = new Float32Array(n);
+  for (let i = 0; i < n; i++) { L[i] *= g; R[i] *= g; mono[i] = (L[i] + R[i]) / 2; }
+
+  if (p.beat > 0) {
+    const len = Math.round(0.3 * SR);
+    for (let y = 0; y < NY; y++) {
+      const accent = p.beatAccent && YEARS[y] % 5 === 0;
+      const st = Math.round(y * spy * SR), a = p.beat * (accent ? 0.9 : 0.5);
+      for (let j = 0; j < len && st + j < n; j++) {
+        const t = j / SR;
+        let v = 0.7 * Math.sin(TWO_PI * 1250 * t) * Math.exp(-t / 0.010) + 0.35 * Math.sin(TWO_PI * 2780 * t) * Math.exp(-t / 0.006);
+        if (accent) v += 0.9 * Math.sin(TWO_PI * 62 * t) * Math.exp(-t / 0.09);
+        L[st + j] += v * a; R[st + j] += v * a;
+      }
+    }
+    let pk = 0; for (let i = 0; i < n; i++) pk = Math.max(pk, Math.abs(L[i]), Math.abs(R[i]));
+    if (pk > 0.98) { const k = 0.98 / pk; for (let i = 0; i < n; i++) { L[i] *= k; R[i] *= k; } }
+  }
+  lastMono = mono; lastSR = SR;
+  return { L, R, curves, n, SR, dur: n / SR };
+}
+
+function fft(re, im) {
+  const n = re.length;
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1; for (; j & bit; bit >>= 1) j ^= bit; j ^= bit;
+    if (i < j) { let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; }
+  }
+  for (let len = 2; len <= n; len <<= 1) {
+    const ang = -2 * Math.PI / len, wr = Math.cos(ang), wi = Math.sin(ang), h = len >> 1;
+    for (let i = 0; i < n; i += len) {
+      let cr = 1, ci = 0;
+      for (let j = 0; j < h; j++) {
+        const a = i + j, b = a + h;
+        const tr = re[b] * cr - im[b] * ci, ti = re[b] * ci + im[b] * cr;
+        re[b] = re[a] - tr; im[b] = im[a] - ti; re[a] += tr; im[a] += ti;
+        const nc = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = nc;
+      }
+    }
+  }
+}
+
+function spectro(v) {
+  const mono = lastMono, SR = lastSR, N = 4096, F = v.frames, RR = v.rows;
+  const out = new Float32Array(F * RR);
+  if (!mono) return { F, R: RR, data: out };
+  const hop = (mono.length - N) / (F - 1), binHz = SR / N, half = N / 2;
+  const fmin = v.logFreq ? 50 : 0, fmax = v.fmax;
+  const fr = x => v.logFreq ? fmin * Math.pow(fmax / fmin, x / (RR - 1)) : fmin + (fmax - fmin) * x / (RR - 1);
+  const lo = new Int32Array(RR), hi = new Int32Array(RR);
+  for (let r = 0; r < RR; r++) {
+    lo[r] = Math.min(half - 1, Math.max(0, Math.floor(fr(r - 0.5) / binHz)));
+    hi[r] = Math.min(half - 1, Math.max(lo[r], Math.ceil(fr(r + 0.5) / binHz)));
+  }
+  const win = new Float64Array(N); for (let i = 0; i < N; i++) win[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / (N - 1));
+  const re = new Float64Array(N), im = new Float64Array(N);
+  let gmax = -Infinity;
+  for (let f = 0; f < F; f++) {
+    const st = Math.round(f * hop);
+    for (let i = 0; i < N; i++) { re[i] = (mono[st + i] || 0) * win[i]; im[i] = 0; }
+    fft(re, im);
+    for (let r = 0; r < RR; r++) {
+      let mx = 0; for (let b = lo[r]; b <= hi[r]; b++) { const m = re[b] * re[b] + im[b] * im[b]; if (m > mx) mx = m; }
+      const db = 10 * Math.log10(mx + 1e-12);
+      out[f * RR + r] = db; if (db > gmax) gmax = db;
+    }
+  }
+  for (let i = 0; i < out.length; i++) out[i] -= gmax;
+  return { F, R: RR, data: out };
+}
+
+self.onmessage = e => {
+  const m = e.data, t0 = performance.now();
+  if (m.type === "render") {
+    const r = render(m.p);
+    const spec = spectro(m.p.view);
+    self.postMessage({ type: "render", id: m.id, L: r.L, R: r.R, curves: r.curves, SR: r.SR, dur: r.dur, spec, ms: performance.now() - t0 },
+      [r.L.buffer, r.R.buffer, spec.data.buffer]);
+  } else if (m.type === "spec") {
+    const spec = spectro(m.view);
+    self.postMessage({ type: "spec", id: m.id, spec, ms: performance.now() - t0 }, [spec.data.buffer]);
+  }
+};
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(function () {
+"use strict";
+const YEARS = []; for (let y = 2006; y <= 2025; y++) YEARS.push(y);
+const DATA = {
+  ICSE: [395,334,371,405,380,441,408,461,496,452,530,415,502,529,617,615,691,780,1049,1150],
+  FSE:  [125,251,152,217,169,203,201,251,273,291,266,295,295,303,360,407,449,465,474,515],
+  ASE:  [121,312,280,220,190,252,138,254,276,289,284,367,386,448,395,440,531,633,587,1181]
+};
+const NAMES = ["ICSE", "FSE", "ASE"];
+const NOTES = { 110: "La2", 146.83: "Re3", 220: "La3", 293.66: "Re4" };
+
+const DEFAULTS = {
+  sr: 44100, mode: "chord", source: "data", secPerYear: 1.0,
+  beat: 0.5, beatAccent: true,
+  threshold: 1.25, saturate: 1.4, gamma: 1.3,
+  ghost: 0.35, baseFreq: 220, partials: 28, satMode: "own", breath: false,
+  fx: {
+    detune: { on: true, amt: 90 },
+    jitter: { on: true, amt: 20 },
+    inharm: { on: true, amt: 2.5 },
+    bright: { on: true, amt: 1.2 },
+    fold:   { on: true, amt: 5 }
+  },
+  view: { logFreq: false, fmax: 5000, dbRange: 70, frames: 220, rows: 160 }
+};
+const P = JSON.parse(JSON.stringify(DEFAULTS));
+let actx = null, srcNode = null, playing = false, startAt = 0, offset = 0, loopOn = false, renderedMode = "chord";
+
+const FX_INFO = {
+  detune: { label: "Detune (stonatura)", min: 0, max: 200, step: 5, fmt: v => `${v} cent`,
+    help: "Sposta l'altezza della nota rispetto a quella di partenza (100 cent = un semitono). La differenza con la voce fantasma, o con le altre note, produce battimenti." },
+  jitter: { label: "Jitter (tremolio dell'intonazione)", min: 0, max: 60, step: 1, fmt: v => `±${v} cent`,
+    help: "Aggiunge all'altezza della nota una variazione casuale e continua, quindi la nota non resta stabile." },
+  inharm: { label: "Inarmonicità", min: 0, max: 6, step: 0.1, fmt: v => `B = ${v.toFixed(1)}‰`,
+    help: "Sposta le componenti del suono (le parziali) fuori dai multipli esatti della frequenza di base. Il suono perde un'altezza chiara. Nello spettrogramma le creste si curvano verso l'alto." },
+  bright: { label: "Spectral tilt (brillantezza)", min: 0, max: 2, step: 0.05, fmt: v => `${(-6.02 * (2.2 - v)).toFixed(1)} dB/ott`,
+    help: "Cambia l'equilibrio tra componenti gravi e acute: con valori più alti le parziali acute diventano più forti. Il valore indica la pendenza dello spettro alla massima stranezza (partenza: −13,2 dB/ott)." },
+  fold:   { label: "Wavefolding (ripiegamento dell'onda)", min: 0, max: 10, step: 0.5, fmt: v => `guadagno ×${(1 + v).toFixed(1)}`,
+    help: "Amplifica la forma d'onda e la ripiega su se stessa quando supera il limite. Si aggiungono molte nuove parziali e il suono diventa più ruvido." }
+};
+
+// ---------- pannello di controllo ----------
+const controls = document.getElementById("controls");
+const el = (tag, attrs = {}, children = []) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "text") e.textContent = v; else if (k.startsWith("on")) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v);
+  }
+  for (const c of [].concat(children)) if (c) e.append(c);
+  return e;
+};
+const updaters = [];
+function slider({ id, label, min, max, step, get, set, fmt, help, kind = "render" }) {
+  const val = el("span", { class: "val" });
+  const input = el("input", { type: "range", id, min, max, step });
+  input.value = get();
+  const sync = () => { input.value = get(); val.textContent = fmt(get()); };
+  input.addEventListener("input", () => { set(parseFloat(input.value)); val.textContent = fmt(get()); schedule(kind); });
+  updaters.push(sync); sync();
+  return el("div", { class: "ctl" }, [
+    el("div", { class: "ctl-head" }, [el("label", { for: id, text: label }), val]),
+    input, help ? el("p", { class: "help", text: help }) : null
+  ]);
+}
+function segmented(id, label, options, get, set) {
+  const wrap = el("div", { class: "seg", role: "group", "aria-label": label, id });
+  const btns = options.map(([v, t]) => {
+    const b = el("button", { type: "button", text: t, onclick: () => { set(v); sync(); } });
+    b.dataset.v = String(v); wrap.append(b); return b;
+  });
+  const sync = () => btns.forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === String(get()))));
+  updaters.push(sync); sync();
+  return wrap;
+}
+function checkbox(id, label, get, set) {
+  const input = el("input", { type: "checkbox", id });
+  input.checked = get();
+  input.addEventListener("change", () => { set(input.checked); });
+  updaters.push(() => { input.checked = get(); });
+  return el("label", { class: "check", for: id }, [input, label]);
+}
+function section(title, kids) { return el("fieldset", {}, [el("legend", { text: title }), ...kids]); }
+
+controls.append(
+  section("Ascolto", [
+    el("div", { class: "ctl" }, [el("label", { text: "Cosa suonare" }),
+      segmented("mode", "Cosa suonare", [["chord", "Accordo"], ["ICSE", "ICSE"], ["FSE", "FSE"], ["ASE", "ASE"]], () => P.mode, v => { P.mode = v; schedule("render"); })]),
+    el("p", { class: "help", text: "Accordo: le tre conferenze suonano insieme, ICSE su La2 (110 Hz), FSE su Mi3 (165 Hz, quinta giusta 3:2, senza battimenti iniziali), ASE su La3 (220 Hz). Singola: una sola conferenza, sulla nota scelta in «Voci», con la sua voce fantasma." }),
+    el("div", { class: "ctl" }, [el("label", { text: "Sorgente della stranezza" }),
+      segmented("source", "Sorgente", [["data", "Dati reali"], ["ramp", "Rampa 0 → 1"]], () => P.source, v => { P.source = v; schedule("render"); })]),
+    el("p", { class: "help", text: "Dati reali: la stranezza segue le sottomissioni. Rampa: la stranezza sale in modo lineare da 0 a 1, indipendentemente dai dati. Con «Solo» si ascolta un effetto alla volta." }),
+    checkbox("loop", "Ripeti in loop", () => loopOn, v => { loopOn = v; if (srcNode) srcNode.loop = v; })
+  ]),
+  section("Tempo e beat", [
+    slider({ id: "spy", label: "Durata di un anno", min: 0.4, max: 2, step: 0.05, get: () => P.secPerYear, set: v => P.secPerYear = v, fmt: v => `${v.toFixed(2)} s` }),
+    slider({ id: "beat", label: "Volume del beat", min: 0, max: 1, step: 0.05, get: () => P.beat, set: v => P.beat = v, fmt: v => v === 0 ? "spento" : `${Math.round(v * 100)}%`,
+      help: "Un click percussivo all'inizio di ogni anno, per seguire lo scorrere del tempo." }),
+    checkbox("accent", "Accento ogni 5 anni (2010, 2015, 2020, 2025)", () => P.beatAccent, v => { P.beatAccent = v; schedule("render"); })
+  ]),
+  section("Dal dato alla stranezza", [
+    slider({ id: "thr", label: "Soglia", min: 1, max: 2, step: 0.05, get: () => P.threshold, set: v => P.threshold = v, fmt: v => `${v.toFixed(2)}× norma`,
+      help: "Sotto questo valore la stranezza resta a 0. La norma è la mediana delle sottomissioni 2006–2015 di ciascuna conferenza." }),
+    slider({ id: "sat", label: "Saturazione", min: 0.3, max: 3, step: 0.05, get: () => P.saturate, set: v => P.saturate = v, fmt: v => `max a ${(P.threshold + v).toFixed(2)}×`,
+      help: "Il valore, rispetto alla norma, a cui la stranezza arriva a 1. In scala comune è uguale per tutte e tre le conferenze." }),
+    el("div", { class: "ctl" }, [el("label", { text: "Scala della saturazione (audio singoli)" }),
+      segmented("satMode", "Scala della saturazione", [["common", "Comune"], ["own", "Per conferenza"]], () => P.satMode, v => { P.satMode = v; if (P.mode !== "chord") schedule("render"); })]),
+    el("p", { class: "help", text: "Per conferenza: la stranezza arriva a 1 nell'anno con più sottomissioni di quella conferenza, e il cursore Saturazione non viene usato. Nell'Accordo si usa sempre la scala comune." }),
+    slider({ id: "gamma", label: "Esponente (gamma)", min: 0.5, max: 3, step: 0.05, get: () => P.gamma, set: v => P.gamma = v, fmt: v => v.toFixed(2),
+      help: "Curva applicata alla stranezza. Con valori maggiori di 1 le variazioni piccole vengono attenuate e quelle grandi restano." })
+  ]),
+  section("Voci", [
+    slider({ id: "ghost", label: "Voce fantasma", min: 0, max: 1, step: 0.05, get: () => P.ghost, set: v => P.ghost = v, fmt: v => v === 0 ? "spenta" : `${Math.round(v * 100)}%`,
+      help: "Una copia della stessa nota, senza effetti e a frequenza fissa per tutti i 20 anni. Fa da riferimento: rende udibile quanto la nota si allontana dal punto di partenza." }),
+    el("div", { class: "ctl" }, [el("label", { text: "Nota della conferenza singola" }),
+      segmented("base", "Nota", Object.entries(NOTES).map(([f, n]) => [parseFloat(f), n]), () => P.baseFreq, v => { P.baseFreq = v; if (P.mode !== "chord") schedule("render"); })]),
+    checkbox("breath", "Respiro lento (oscillazione di volume a 0,11 Hz, non legata ai dati)", () => P.breath, v => { P.breath = v; schedule("render"); }),
+    slider({ id: "partials", label: "Parziali", min: 8, max: 40, step: 1, get: () => P.partials, set: v => P.partials = v, fmt: v => `${v}`,
+      help: "Numero di componenti sinusoidali che formano ogni nota." })
+  ])
+);
+
+const fxSection = section("Effetti di sintesi", [
+  el("p", { class: "help", text: "L'intensità di ogni effetto segue la stranezza: a 0 l'effetto è spento, a 1 raggiunge il valore impostato qui." }),
+  el("div", { class: "row" }, [
+    el("button", { type: "button", class: "small", text: "Accendi tutte", onclick: () => { for (const k in P.fx) P.fx[k].on = true; syncAll(); schedule("render"); } }),
+    el("button", { type: "button", class: "small", text: "Valori iniziali", onclick: () => { Object.assign(P, JSON.parse(JSON.stringify({ ...DEFAULTS, view: P.view }))); syncAll(); schedule("render"); } })
+  ])
+]);
+for (const [key, info] of Object.entries(FX_INFO)) {
+  const box = el("div", { class: "fx" });
+  const cb = el("input", { type: "checkbox", id: `fx-${key}` });
+  const solo = el("button", { type: "button", class: "small", text: "Solo", "aria-label": `Solo ${info.label}`,
+    onclick: () => { for (const k in P.fx) P.fx[k].on = k === key; syncAll(); schedule("render"); } });
+  cb.addEventListener("change", () => { P.fx[key].on = cb.checked; syncAll(); schedule("render"); });
+  const s = slider({ id: `amt-${key}`, label: "Quantità massima", min: info.min, max: info.max, step: info.step,
+    get: () => P.fx[key].amt, set: v => P.fx[key].amt = v, fmt: info.fmt });
+  const range = s.querySelector("input");
+  updaters.push(() => { cb.checked = P.fx[key].on; box.classList.toggle("off", !P.fx[key].on); range.disabled = !P.fx[key].on; });
+  box.append(el("div", { class: "fx-head" }, [el("label", { for: `fx-${key}` }, [cb, info.label]), solo]), s, el("p", { class: "help", text: info.help }));
+  fxSection.append(box);
+}
+controls.append(fxSection);
+controls.append(section("Spettrogramma", [
+  el("div", { class: "ctl" }, [el("label", { text: "Scala delle frequenze" }),
+    segmented("fscale", "Scala delle frequenze", [[false, "Lineare"], [true, "Logaritmica"]], () => P.view.logFreq, v => { P.view.logFreq = v; buildAxes(); schedule("spec"); })]),
+  el("p", { class: "help", text: "Lineare: ogni Hz occupa lo stesso spazio, ed è la scala che mostra meglio l'inarmonicità. Logaritmica: ogni ottava occupa lo stesso spazio." }),
+  slider({ id: "fmax", label: "Frequenza massima", min: 1000, max: 12000, step: 500, get: () => P.view.fmax, set: v => { P.view.fmax = v; buildAxes(); }, fmt: v => `${(v / 1000).toLocaleString("it-IT")} kHz`, kind: "spec",
+    help: "Limite superiore dell'asse delle frequenze." }),
+  slider({ id: "dbr", label: "Gamma dinamica", min: 30, max: 110, step: 5, get: () => P.view.dbRange, set: v => P.view.dbRange = v, fmt: v => `${v} dB`, kind: "mesh",
+    help: "Intervallo di intensità mostrato, dal massimo verso il basso. Valori più alti rendono visibili anche le componenti deboli." })
+]));
+function syncAll() { updaters.forEach(f => f()); }
+
+// ---------- worker ----------
+let worker = null;
+try {
+  const src = document.getElementById("synth-worker").textContent;
+  worker = new Worker(URL.createObjectURL(new Blob([src], { type: "text/javascript" })));
+} catch (e) { setStatus("Il browser non permette di calcolare l'audio qui.", false); }
+let busy = false, queued = null, jobId = 0, timer = null;
+function schedule(kind) {
+  if (kind === "mesh") { updateMesh(); return; }
+  clearTimeout(timer);
+  timer = setTimeout(() => request(kind), kind === "render" ? 220 : 120);
+}
+function request(kind) {
+  if (!worker) return;
+  if (busy) { queued = queued === "render" || kind === "render" ? "render" : "spec"; return; }
+  busy = true; setStatus(kind === "render" ? "Calcolo dell'audio…" : "Calcolo dello spettrogramma…", true);
+  const id = ++jobId;
+  if (kind === "render") worker.postMessage({ type: "render", id, p: JSON.parse(JSON.stringify(P)) });
+  else worker.postMessage({ type: "spec", id, view: { ...P.view } });
+}
+let audio = null, curves = {}, spec = null;
+if (worker) worker.onmessage = e => {
+  const m = e.data; busy = false;
+  if (m.type === "render") {
+    const old = audio; audio = { L: m.L, R: m.R, SR: m.SR, dur: m.dur, buffer: null };
+    curves = m.curves; renderedMode = P.mode;
+    if (playing) { const pos = position(); const frac = old ? pos / old.dur : 0; startPlayback(Math.min(m.dur - 0.05, frac * m.dur)); }
+    else if (old) offset = Math.min(offset / old.dur * m.dur, m.dur);
+  }
+  spec = m.spec; updateMesh(); buildKeys(); buildMeters(); drawChart();
+  setStatus(`Pronto · calcolato in ${(m.ms / 1000).toLocaleString("it-IT", { maximumFractionDigits: 1 })} s`, false);
+  if (queued) { const k = queued; queued = null; request(k); }
+};
+function setStatus(t, isBusy) {
+  document.getElementById("statusText").textContent = t;
+  document.getElementById("status").classList.toggle("busy", isBusy);
+}
+
+// ---------- audio ----------
+const playBtn = document.getElementById("play"), playIcon = document.getElementById("playIcon");
+function ensureBuffer() {
+  if (!audio.buffer) {
+    const b = actx.createBuffer(2, audio.L.length, audio.SR);
+    b.copyToChannel(audio.L, 0); b.copyToChannel(audio.R, 1); audio.buffer = b;
+  }
+  return audio.buffer;
+}
+function startPlayback(from) {
+  if (!audio) return;
+  if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+  actx.resume();
+  stopNode();
+  const node = actx.createBufferSource();
+  node.buffer = ensureBuffer(); node.loop = loopOn; node.connect(actx.destination);
+  node.onended = () => { if (node === srcNode && playing) { playing = false; offset = 0; srcNode = null; setPlayIcon(); } };
+  node.start(0, Math.max(0, from));
+  srcNode = node; startAt = actx.currentTime - from; playing = true; setPlayIcon();
+}
+function stopNode() { if (srcNode) { const n = srcNode; srcNode = null; try { n.stop(); } catch (e) {} } }
+function position() {
+  if (!audio) return 0;
+  if (!playing || !actx) return offset;
+  let t = actx.currentTime - startAt;
+  if (loopOn) t = ((t % audio.dur) + audio.dur) % audio.dur;
+  return Math.min(t, audio.dur);
+}
+function setPlayIcon() {
+  playIcon.innerHTML = playing ? '<path d="M5 3h4v14H5zM11 3h4v14h-4z"/>' : '<path d="M5 3l12 7-12 7z"/>';
+  playBtn.setAttribute("aria-label", playing ? "Pausa" : "Riproduci");
+}
+playBtn.addEventListener("click", () => {
+  if (!audio) return;
+  if (playing) { offset = position(); playing = false; stopNode(); setPlayIcon(); }
+  else startPlayback(offset >= audio.dur - 0.05 ? 0 : offset);
+});
+function seek(t) { if (!audio) return; t = Math.max(0, Math.min(audio.dur - 0.05, t)); if (playing) startPlayback(t); else offset = t; drawChart(); }
+
+// ---------- barra del tempo ----------
+const scrub = document.getElementById("scrub"), ticksEl = document.getElementById("ticks");
+let scrubbing = false, resumeAfter = false;
+YEARS.forEach((y, i) => {
+  const left = `${(i / YEARS.length * 100).toFixed(2)}%`;
+  const major = y % 5 === 0 || i === 0;
+  const tk = el("span", major ? { class: "major" } : {}); tk.style.left = left; ticksEl.append(tk);
+  if (major) { const b = el("b", { text: String(y) }); b.style.left = left; ticksEl.append(b); }
+});
+scrub.addEventListener("pointerdown", () => {
+  if (scrubbing) return;
+  scrubbing = true; resumeAfter = playing;
+  if (playing) { offset = position(); playing = false; stopNode(); setPlayIcon(); }
+});
+scrub.addEventListener("input", () => { if (audio) seek(+scrub.value / 1000 * audio.dur); });
+const endScrub = () => { if (!scrubbing) return; scrubbing = false; if (resumeAfter) startPlayback(offset); };
+scrub.addEventListener("change", endScrub);
+scrub.addEventListener("pointerup", endScrub);
+function stepYear(d) {
+  if (!audio) return;
+  const spy = audio.dur / YEARS.length;
+  const yi = Math.max(0, Math.min(YEARS.length - 1, Math.floor(position() / spy + 1e-6) + d));
+  seek(yi * spy);
+}
+document.getElementById("prevYear").addEventListener("click", () => stepYear(-1));
+document.getElementById("nextYear").addEventListener("click", () => stepYear(1));
+
+// ---------- indicatori ----------
+const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const voiceColor = n => css(`--${n.toLowerCase()}`);
+const metersEl = document.getElementById("meters"), keysEl = document.getElementById("keys");
+let meterEls = {};
+function buildMeters() {
+  metersEl.textContent = ""; meterEls = {};
+  for (const n of NAMES) {
+    const i = el("i"); i.style.background = voiceColor(n);
+    const num = el("span", { class: "num", text: "0,00" });
+    const row = el("div", { class: "meter" + (curves[n] ? "" : " dim"), title: `Stranezza di ${n}` }, [el("span", { text: n }), el("div", { class: "bar" }, [i]), num]);
+    metersEl.append(row); meterEls[n] = { i, num };
+  }
+}
+function buildKeys() {
+  keysEl.textContent = "";
+  for (const n of NAMES) { const i = el("i"); i.style.background = voiceColor(n); keysEl.append(el("span", {}, [i, n])); }
+}
+const yearEl = document.getElementById("year");
+function updateIndicators() {
+  if (!audio) return;
+  const pos = position(), spy = audio.dur / YEARS.length;
+  const yi = Math.min(YEARS.length - 1, Math.floor(pos / spy));
+  yearEl.firstChild.nodeValue = String(YEARS[yi]);
+  const j = Math.min(399, Math.round(pos / audio.dur * 399));
+  for (const n of NAMES) {
+    const m = meterEls[n]; if (!m) continue;
+    const v = curves[n] ? curves[n][j] : 0;
+    m.i.style.width = `${(v * 100).toFixed(1)}%`; m.num.textContent = v.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+}
+
+// ---------- grafico dei dati ----------
+const chart = document.getElementById("chart"), cctx = chart.getContext("2d");
+const CH = { padL: 44, padR: 12, padT: 10, split: 0.6, gap: 22, padB: 22 };
+function drawChart() {
+  const dpr = window.devicePixelRatio || 1, w = chart.clientWidth, h = chart.clientHeight;
+  if (!w) return;
+  chart.width = Math.round(w * dpr); chart.height = Math.round(h * dpr);
+  cctx.setTransform(dpr, 0, 0, dpr, 0, 0); cctx.clearRect(0, 0, w, h);
+  const ink = css("--muted"), line = css("--line");
+  const x0 = CH.padL, x1 = w - CH.padR, top0 = CH.padT, top1 = (h - CH.padB) * CH.split, bot0 = top1 + CH.gap, bot1 = h - CH.padB;
+  const xs = i => x0 + (i + 0.5) / YEARS.length * (x1 - x0);
+  cctx.font = `11px ${css("--font-mono")}`; cctx.fillStyle = ink; cctx.strokeStyle = line; cctx.lineWidth = 1;
+  // assi superiori
+  const ymax = 1200, ys = v => top1 - v / ymax * (top1 - top0);
+  cctx.textAlign = "right"; cctx.textBaseline = "middle";
+  for (const v of [0, 400, 800, 1200]) { cctx.beginPath(); cctx.moveTo(x0, ys(v)); cctx.lineTo(x1, ys(v)); cctx.stroke(); cctx.fillText(String(v), x0 - 6, ys(v)); }
+  // assi inferiori
+  const ss = v => bot1 - v * (bot1 - bot0);
+  for (const v of [0, 1]) { cctx.beginPath(); cctx.moveTo(x0, ss(v)); cctx.lineTo(x1, ss(v)); cctx.stroke(); cctx.fillText(String(v), x0 - 6, ss(v)); }
+  cctx.save(); cctx.translate(10, (bot0 + bot1) / 2); cctx.rotate(-Math.PI / 2); cctx.textAlign = "center"; cctx.fillText("stran.", 0, 0); cctx.restore();
+  // anni
+  cctx.textAlign = "center"; cctx.textBaseline = "top";
+  YEARS.forEach((y, i) => { if (y % 5 === 0 || i === 0) cctx.fillText(String(y), xs(i), bot1 + 6); });
+  // serie
+  const single = renderedMode !== "chord";
+  for (const n of NAMES) {
+    const c = voiceColor(n);
+    cctx.globalAlpha = single && n !== renderedMode ? 0.25 : 1;
+    cctx.strokeStyle = c; cctx.lineWidth = 2; cctx.beginPath();
+    DATA[n].forEach((v, i) => i ? cctx.lineTo(xs(i), ys(v)) : cctx.moveTo(xs(i), ys(v))); cctx.stroke();
+    cctx.fillStyle = c; DATA[n].forEach((v, i) => { cctx.beginPath(); cctx.arc(xs(i), ys(v), 2.2, 0, 7); cctx.fill(); });
+    if (curves[n]) {
+      const cv = curves[n], xa = j => x0 + j / 399 * (x1 - x0);
+      cctx.globalAlpha = 0.16; cctx.beginPath(); cctx.moveTo(x0, ss(0));
+      for (let j = 0; j < 400; j++) cctx.lineTo(xa(j), ss(cv[j])); cctx.lineTo(x1, ss(0)); cctx.fill();
+      cctx.globalAlpha = 1; cctx.lineWidth = 1.5; cctx.beginPath();
+      for (let j = 0; j < 400; j++) j ? cctx.lineTo(xa(j), ss(cv[j])) : cctx.moveTo(xa(j), ss(cv[j])); cctx.stroke();
+    }
+  }
+  cctx.globalAlpha = 1;
+  // testina
+  if (audio) {
+    const px = x0 + position() / audio.dur * (x1 - x0);
+    cctx.strokeStyle = css("--accent"); cctx.lineWidth = 2; cctx.beginPath(); cctx.moveTo(px, top0); cctx.lineTo(px, bot1); cctx.stroke();
+  }
+}
+chart.addEventListener("click", e => {
+  if (!audio) return;
+  const r = chart.getBoundingClientRect(), x0 = CH.padL, x1 = r.width - CH.padR;
+  const frac = Math.max(0, Math.min(1, (e.clientX - r.left - x0) / (x1 - x0)));
+  const yi = Math.min(YEARS.length - 1, Math.floor(frac * YEARS.length));
+  seek(yi * audio.dur / YEARS.length);
+});
+
+// ---------- spettrogramma 3D ----------
+const W = 10, D = 6, H = 2.4;
+let renderer, scene, camera, orbit, mesh, geom, playhead, labelsEl = document.getElementById("labels"), labelItems = [], axisGroup;
+const stage = document.getElementById("stage");
+function hexToRgb(h) { h = h.replace("#", ""); if (h.length === 3) h = h.split("").map(c => c + c).join(""); const n = parseInt(h, 16); return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255]; }
+let cmap = [];
+function readColormap() { cmap = ["--cm0", "--cm1", "--cm2", "--cm3", "--cm4"].map(v => hexToRgb(css(v))); }
+function cm(t) {
+  const x = Math.max(0, Math.min(0.9999, t)) * (cmap.length - 1), i = Math.floor(x), f = x - i, a = cmap[i], b = cmap[i + 1];
+  return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f];
+}
+function init3D() {
+  if (!window.THREE || !THREE.OrbitControls) {
+    stage.innerHTML = '<p class="err">Non riesco a caricare la libreria 3D. Ricarica la pagina; l\'audio e il grafico dei dati funzionano comunque.</p>';
+    return false;
+  }
+  const canvas = document.getElementById("gl");
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(40, 1, 0.1, 200);
+  camera.position.set(-9.6, 7.6, 10.6);
+  orbit = new THREE.OrbitControls(camera, canvas);
+  orbit.target.set(-0.9, 0.4, 0.3); orbit.enableDamping = true; orbit.dampingFactor = 0.08; orbit.update();
+  scene.add(new THREE.AmbientLight(0xffffff, 0.62));
+  const dl = new THREE.DirectionalLight(0xffffff, 0.55); dl.position.set(-4, 10, 6); scene.add(dl);
+  const F = P.view.frames, RR = P.view.rows;
+  geom = new THREE.BufferGeometry();
+  const pos = new Float32Array(F * RR * 3), col = new Float32Array(F * RR * 3), idx = [];
+  for (let f = 0; f < F; f++) for (let r = 0; r < RR; r++) {
+    const k = (f * RR + r) * 3;
+    pos[k] = (f / (F - 1) - 0.5) * W; pos[k + 1] = 0; pos[k + 2] = (r / (RR - 1) - 0.5) * D;
+  }
+  for (let f = 0; f < F - 1; f++) for (let r = 0; r < RR - 1; r++) {
+    const a = f * RR + r, b = a + RR, c = a + 1, d = b + 1; idx.push(a, b, c, b, d, c);
+  }
+  geom.setIndex(idx);
+  geom.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  geom.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  mesh = new THREE.Mesh(geom, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }));
+  scene.add(mesh);
+  const ph = new THREE.PlaneGeometry(D, H * 1.15); ph.rotateY(Math.PI / 2); ph.translate(0, H * 1.15 / 2, 0);
+  playhead = new THREE.Mesh(ph, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.18, side: THREE.DoubleSide, depthWrite: false }));
+  scene.add(playhead);
+  const bg = new THREE.BoxGeometry(1, 1, 1); bg.translate(0, 0.5, 0);
+  bars = new THREE.InstancedMesh(bg, new THREE.MeshLambertMaterial({ color: 0xffffff }), YEARS.length * NB);
+  const m0 = new THREE.Matrix4().makeScale(0.001, 0.001, 0.001), c0 = new THREE.Color(1, 1, 1);
+  for (let i = 0; i < YEARS.length * NB; i++) { bars.setMatrixAt(i, m0); bars.setColorAt(i, c0); }
+  bars.visible = false; scene.add(bars);
+  buildAxes(); applyTheme();
+  new ResizeObserver(resize).observe(stage); resize();
+  return true;
+}
+function buildAxes() {
+  if (!scene) return;
+  if (axisGroup) scene.remove(axisGroup);
+  axisGroup = new THREE.Group();
+  labelsEl.textContent = ""; labelItems = [];
+  const mat = new THREE.LineBasicMaterial({ color: new THREE.Color(css("--muted")) });
+  const seg = [];
+  const fx = i => ((i + 0.5) / YEARS.length - 0.5) * W, front = D / 2;
+  // cornice
+  seg.push(-W / 2, 0, front, W / 2, 0, front, -W / 2, 0, -front, W / 2, 0, -front, -W / 2, 0, front, -W / 2, 0, -front, W / 2, 0, front, W / 2, 0, -front);
+  YEARS.forEach((y, i) => {
+    const len = y % 5 === 0 ? 0.3 : 0.14;
+    seg.push(fx(i) - W / YEARS.length / 2, 0, front, fx(i) - W / YEARS.length / 2, 0, front + len);
+    if (y % 5 === 0 || i === 0) addLabel(String(y), new THREE.Vector3(fx(i), 0, front + 0.55));
+  });
+  const v = P.view, fmin = v.logFreq ? 50 : 0;
+  const zf = hz => ((v.logFreq ? Math.log(hz / fmin) / Math.log(v.fmax / fmin) : (hz - fmin) / (v.fmax - fmin)) - 0.5) * D;
+  const ticks = v.logFreq ? [100, 200, 500, 1000, 2000, 5000, 10000] : Array.from({ length: Math.floor(v.fmax / 1000) + 1 }, (_, i) => i * 1000);
+  for (const hz of ticks) {
+    if (hz > v.fmax || hz < fmin) continue;
+    const z = zf(hz);
+    seg.push(-W / 2, 0, z, -W / 2 - 0.18, 0, z);
+    addLabel(hz >= 1000 ? `${hz / 1000}k` : String(hz), new THREE.Vector3(-W / 2 - 0.5, 0, z));
+  }
+  addLabel("anno →", new THREE.Vector3(W / 2 + 0.9, 0, front + 0.55), "title");
+  addLabel("frequenza (Hz)", new THREE.Vector3(-W / 2 - 0.3, 0, -front - 1.35), "title");
+  addLabel("intensità", new THREE.Vector3(-W / 2, H * 1.15, -front), "title");
+  seg.push(-W / 2, 0, -front, -W / 2, H * 1.05, -front);
+  const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(seg, 3));
+  axisGroup.add(new THREE.LineSegments(g, mat));
+  scene.add(axisGroup);
+}
+function addLabel(text, v3, cls) {
+  const s = el("span", { text }); if (cls) s.className = cls;
+  labelsEl.append(s); labelItems.push({ s, v3 });
+}
+function updateLabels() {
+  const w = stage.clientWidth, h = stage.clientHeight, v = new THREE.Vector3();
+  for (const { s, v3 } of labelItems) {
+    v.copy(v3).project(camera);
+    if (v.z > 1) { s.style.display = "none"; continue; }
+    s.style.display = "";
+    s.style.transform = `translate(${((v.x + 1) / 2 * w).toFixed(1)}px, ${((1 - v.y) / 2 * h).toFixed(1)}px) translate(-50%, -50%)`;
+  }
+}
+function updateMesh() {
+  if (!geom || !spec || spec.F !== P.view.frames) return;
+  const pos = geom.attributes.position.array, col = geom.attributes.color.array, d = spec.data, range = P.view.dbRange;
+  for (let i = 0; i < d.length; i++) {
+    const t = Math.max(0, Math.min(1, (d[i] + range) / range));
+    pos[i * 3 + 1] = t * t * H;
+    const c = cm(t); col[i * 3] = c[0]; col[i * 3 + 1] = c[1]; col[i * 3 + 2] = c[2];
+  }
+  geom.attributes.position.needsUpdate = true; geom.attributes.color.needsUpdate = true;
+  geom.computeVertexNormals(); geom.computeBoundingSphere();
+  updateBars();
+}
+
+// vista a barre: una barra per anno, una fila di barre per ogni fascia di frequenze
+const NB = 24;
+let bars = null, barVals = null, barYear = -2, viewMode = "surface";
+function updateBars() {
+  if (!bars || !spec) return;
+  const F = spec.F, R = spec.R, d = spec.data, range = P.view.dbRange, NY = YEARS.length;
+  const sum = new Float64Array(NY * NB), cnt = new Float64Array(NY * NB);
+  for (let f = 0; f < F; f++) {
+    const yi = Math.min(NY - 1, Math.floor(f / F * NY));
+    for (let r = 0; r < R; r++) {
+      const k = yi * NB + Math.min(NB - 1, Math.floor(r / R * NB));
+      sum[k] += Math.pow(10, d[f * R + r] / 10); cnt[k]++;
+    }
+  }
+  barVals = new Float32Array(NY * NB);
+  const m = new THREE.Matrix4(), bw = W / NY * 0.72, bd = D / NB * 0.78;
+  for (let yi = 0; yi < NY; yi++) for (let b = 0; b < NB; b++) {
+    const k = yi * NB + b, db = 10 * Math.log10(sum[k] / (cnt[k] || 1) + 1e-12);
+    const t = Math.max(0, Math.min(1, (db + range) / range));
+    barVals[k] = t;
+    m.makeScale(bw, Math.max(0.01, t * H), bd);
+    m.setPosition(((yi + 0.5) / NY - 0.5) * W, 0, ((b + 0.5) / NB - 0.5) * D);
+    bars.setMatrixAt(k, m);
+  }
+  bars.instanceMatrix.needsUpdate = true;
+  barYear = -2; colorBars(currentYear());
+}
+function currentYear() { return audio ? Math.min(YEARS.length - 1, Math.floor(position() / (audio.dur / YEARS.length) + 1e-6)) : 0; }
+function colorBars(yi) {
+  if (!bars || !barVals) return;
+  const bgc = hexToRgb(css("--plot-bg")), c = new THREE.Color();
+  for (let k = 0; k < barVals.length; k++) {
+    const col = cm(barVals[k]), dim = Math.floor(k / NB) === yi ? 0 : 0.5;
+    c.setRGB(col[0] + (bgc[0] - col[0]) * dim, col[1] + (bgc[1] - col[1]) * dim, col[2] + (bgc[2] - col[2]) * dim);
+    bars.setColorAt(k, c);
+  }
+  bars.instanceColor.needsUpdate = true;
+  barYear = yi;
+}
+function applyTheme() {
+  readColormap();
+  if (scene) { scene.background = new THREE.Color(css("--plot-bg")); playhead.material.color = new THREE.Color(css("--accent")); buildAxes(); updateMesh(); }
+  buildKeys(); buildMeters(); drawChart();
+}
+function resize() {
+  if (!renderer) return;
+  const w = stage.clientWidth, h = stage.clientHeight;
+  renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+}
+const VIEWS = {
+  persp: { pos: [-9.6, 7.6, 10.6], target: [-0.9, 0.4, 0.3] },
+  top:   { pos: [0, 13.5, 0.01], target: [0, 0, 0] },
+  side:  { pos: [13, 2.2, 0], target: [0, 0.9, 0] },
+  bars:  { pos: [-4.5, 4.2, 12.5], target: [-0.3, 0.8, 0], bars: true }
+};
+let camAnim = null;
+const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+document.getElementById("views").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b || !camera) return;
+  document.querySelectorAll("#views button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  const v = VIEWS[b.dataset.view];
+  viewMode = v.bars ? "bars" : "surface";
+  mesh.visible = !v.bars; bars.visible = !!v.bars; playhead.visible = !v.bars;
+  if (v.bars) colorBars(currentYear());
+  const to ={ pos: new THREE.Vector3(...v.pos), target: new THREE.Vector3(...v.target) };
+  if (reduced) { camera.position.copy(to.pos); orbit.target.copy(to.target); orbit.update(); return; }
+  camAnim = { t0: performance.now(), from: { pos: camera.position.clone(), target: orbit.target.clone() }, to };
+});
+
+function frame(now) {
+  requestAnimationFrame(frame);
+  if (audio) {
+    updateIndicators();
+    if (playing) drawChart();
+    if (!scrubbing) scrub.value = String(Math.round(position() / audio.dur * 1000));
+  }
+  if (!renderer) return;
+  if (camAnim) {
+    const k = Math.min(1, (now - camAnim.t0) / 700), e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    camera.position.lerpVectors(camAnim.from.pos, camAnim.to.pos, e); orbit.target.lerpVectors(camAnim.from.target, camAnim.to.target, e);
+    if (k >= 1) camAnim = null;
+  }
+  orbit.update();
+  if (viewMode === "bars") { const yi = currentYear(); if (yi !== barYear) colorBars(yi); }
+  if (audio) playhead.position.x = (position() / audio.dur - 0.5) * W;
+  renderer.render(scene, camera);
+  updateLabels();
+}
+
+// ---------- esportazione ----------
+const toast = document.getElementById("toast");
+function settingsJson() {
+  const { view, ...rest } = P;
+  return JSON.stringify({ ...rest, view: { logFreq: view.logFreq, fmax: view.fmax, dbRange: view.dbRange } }, null, 2);
+}
+function say(t) { toast.textContent = t; clearTimeout(say.t); say.t = setTimeout(() => toast.textContent = "", 4000); }
+document.getElementById("copyJson").addEventListener("click", () => {
+  const txt = settingsJson();
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(() => say("Impostazioni copiate."), () => say("Copia non permessa qui. Usa «Salva impostazioni»."));
+  else say("Copia non permessa qui. Usa «Salva impostazioni».");
+});
+const saveBtn = document.getElementById("saveJson");
+let downloads = null;
+saveBtn.addEventListener("click", async () => {
+  if (!downloads) { say("Il salvataggio non è disponibile in questa vista. Usa «Copia impostazioni»."); return; }
+  try { await downloads.save({ filename: "impostazioni.json", data: settingsJson() }); say("Impostazioni salvate."); }
+  catch (e) { if (e && e.code !== "declined") say("Salvataggio non riuscito. Usa «Copia impostazioni»."); }
+});
+if (window.claude && window.claude.use) window.claude.use("downloads").then(d => { downloads = d; if (!d) saveBtn.hidden = true; }).catch(() => { saveBtn.hidden = true; });
+else saveBtn.hidden = true;
+
+// ---------- avvio ----------
+const mq = window.matchMedia("(prefers-color-scheme: dark)");
+(mq.addEventListener ? mq.addEventListener("change", applyTheme) : mq.addListener(applyTheme));
+new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+window.addEventListener("resize", drawChart);
+readColormap(); buildKeys(); buildMeters();
+init3D();
+requestAnimationFrame(frame);
+request("render");
+})();
+</script>
