@@ -132,6 +132,8 @@ details.opts summary::-webkit-details-marker { display: none; }
 details.opts summary::after { content: " ▾"; }
 details.opts[open] summary::after { content: " ▴"; }
 details.opts .knobs { padding-top: 12px; }
+.knob-note { font-size: 0.85rem; color: var(--muted); margin: -6px 0 0; max-width: 72ch; }
+.knob-note b { color: var(--ink); font-weight: 500; }
 .opt-note { grid-column: 1 / -1; font-size: 0.82rem; color: var(--muted); margin: -8px 0 4px; max-width: 70ch; }
 .opt-note b { color: var(--ink); font-weight: 500; }
 .field { display: grid; gap: 6px; }
@@ -756,6 +758,17 @@ addSlide({
   }
 });
 
+// what the depth means at the current s, for each effect (shown under the knobs)
+const hz = (f0, c) => fmtN(f0 * (Math.pow(2, c / 1200) - 1), 1);
+const DEPTH_NOTES = {
+  detune: (st, s) => `<b>Depth D = ${st.depth} cents</b> is the shift reached at s = 1. At s = ${fmtN(s)} the whole note sits ${fmtN(st.depth * s, 0)} cents above f₀: ${fmtN(st.f0 * Math.pow(2, st.depth * s / 1200), 1)} Hz instead of ${fmtN(st.f0, 0)} Hz.`,
+  jitter: (st, s) => `<b>Depth J = ±${st.depth} cents</b> is the widest wobble, reached at s = 1. At s = ${fmtN(s)} the pitch wanders at random within ±${fmtN(st.depth * s, 0)} cents of f₀, that is ±${hz(st.f0, st.depth * s)} Hz around ${fmtN(st.f0, 0)} Hz. It is measured from the note's own pitch, so with detune on it wanders around the shifted note.`,
+  inharm: (st, s) => `<b>Depth B = ${fmtN(st.depth, 1)}‰</b> is the stiffness coefficient at s = 1. At s = ${fmtN(s)} the effective value is B · s = ${fmtN(st.depth * s, 2)}‰, which lifts the 10th partial by ${fmtN((Math.sqrt(1 + st.depth / 1000 * s * 100) - 1) * 100, 1)}% above its harmonic position.`,
+  bright: (st, s) => `<b>Depth T = ${fmtN(st.depth)}</b> is how much the spectral exponent drops at s = 1. At s = ${fmtN(s)}, α = 2.2 − T · s = ${fmtN(2.2 - st.depth * s)}, a slope of ${fmtN(-6.02 * (2.2 - st.depth * s), 1)} dB per octave instead of −13.2.`,
+  fold: (st, s) => `<b>Depth G = ${fmtN(st.depth, 1)}</b> sets the gain at s = 1: ×${fmtN(1 + st.depth, 1)}. At s = ${fmtN(s)} the waveform is amplified ×${fmtN(1 + st.depth * s, 1)} before folding; every 2 above ×1 adds one more fold.`
+};
+const S_NOTE = s => `<b>Strangeness s = ${fmtN(s)}</b> stands in for one year's value. It sets how strongly the effect acts right now, and it is what With effect and A/B play; the ramp sweeps it from 0 to 1. In the full piece s comes from the data. `;
+
 // ---------- effect slide: one note, one effect ----------
 function effectSlide(def) {
   addSlide({
@@ -768,6 +781,7 @@ function effectSlide(def) {
       const k = el("div", { class: "knobs" }); t.append(k);
       const sK = knob(k, { label: "Strangeness s", main: true, min: 0, max: 1, step: 0.01, value: st.s, fmt: v => fmtN(v), onInput: v => { st.s = v; st.live = null; redraw(); } });
       knob(k, Object.assign({}, def.depth, { onInput: v => { st.depth = v; redraw(); } }));
+      const kn = el("p", { class: "knob-note", "aria-live": "polite" }); t.append(kn);
       const fx = () => Object.assign({}, NOFX, { [def.key]: st.depth });
       const job = (s, d = 2.5) => ({ dur: d, partials: DEF.partials, fx: fx(), voices: [voice({ f0: st.f0, ghost: st.ghost, s })] });
       options(t, b => {
@@ -776,7 +790,7 @@ function effectSlide(def) {
         chips(b, { title: "Fundamental f₀", label: "Fundamental", options: NOTES, value: st.f0, onChange: v => { st.f0 = v; redraw(); } });
         b.append(el("p", { class: "opt-note", html: "<b>Fundamental f₀</b>: the pitch of the note used in this experiment. Effects measured in cents sound the same at any pitch; those measured in hertz, such as beats, scale with it." }));
       }, "More settings: ghost voice and pitch");
-      function redraw() { draw.redraw(); statsSet(def.stats(st, sv())); }
+      function redraw() { draw.redraw(); statsSet(def.stats(st, sv())); kn.innerHTML = S_NOTE(sv()) + DEPTH_NOTES[def.key](st, sv()); }
       redraw();
       listen(t, { label: "Ramp: s from 0 to 1", run: b => playJobs(b, [job({ type: "ramp", from: 0, to: 1 }, 6)], `${def.label} · ramp`, p => { st.live = p ? p.frac : null; sK.set(sv()); redraw(); }) }, [
         { label: "Clean", run: b => playJobs(b, [job(C(0))], "clean note") },
