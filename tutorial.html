@@ -1073,6 +1073,51 @@ addSlide({
   }
 });
 
+addSlide({
+  id: "tool", chain: "Tool", kicker: "Passo 11 · Il tool",
+  title: "Dal tutorial al tool completo",
+  text: `
+    <p>Il tool «Sottomissioni in Suono» contiene tutti i parametri visti in questo tutorial, con gli stessi nomi e gli stessi valori predefiniti. Il motore di sintesi è lo stesso.</p>
+    <p>In più offre:</p>
+    <ul>
+      <li>lo <b>spettrogramma 3D</b> del brano, con le viste Prospettiva, Dall'alto, Profilo e Barre (una barra per anno, una fila per fascia di frequenze);</li>
+      <li>la <b>barra del tempo</b> per spostarsi negli anni e le frecce per avanzare di un anno;</li>
+      <li>il grafico delle sottomissioni con la curva di s calcolata dai parametri correnti;</li>
+      <li>il pulsante <b>Solo</b> per ogni effetto, lo stesso isolamento usato nelle slide;</li>
+      <li>l'esportazione delle impostazioni in JSON, da usare con <code>sonify.py</code> per ottenere i file WAV.</li>
+    </ul>
+    <p>La tabella collega ogni concetto al controllo corrispondente.</p>`,
+  build(lab) {
+    lab.append(el("p", { class: "lab-title", text: "Dove trovare ogni concetto nel tool" }));
+    const rows = [
+      ["Norma (mediana 2006–2015)", "fissa", "—"],
+      ["Soglia", "Soglia", "Dal dato alla stranezza"],
+      ["Saturazione, scala comune o per conferenza", "Saturazione · Scala della saturazione", "Dal dato alla stranezza"],
+      ["Esponente γ", "Esponente (gamma)", "Dal dato alla stranezza"],
+      ["Dati reali o rampa di s", "Sorgente della stranezza", "Ascolto"],
+      ["Accordo o conferenza singola", "Cosa suonare", "Ascolto"],
+      ["Numero di parziali N", "Parziali", "Voci"],
+      ["Fondamentale della nota singola", "Nota della conferenza singola", "Voci"],
+      ["Voce fantasma", "Voce fantasma", "Voci"],
+      ["Detune D", "Detune (stonatura)", "Effetti di sintesi"],
+      ["Jitter J", "Jitter (tremolio dell'intonazione)", "Effetti di sintesi"],
+      ["Inarmonicità B", "Inarmonicità", "Effetti di sintesi"],
+      ["Spectral tilt T", "Spectral tilt (brillantezza)", "Effetti di sintesi"],
+      ["Wavefolding G", "Wavefolding (ripiegamento dell'onda)", "Effetti di sintesi"],
+      ["Un solo effetto attivo", "Solo (su ogni effetto)", "Effetti di sintesi"],
+      ["Durata di un anno", "Durata di un anno", "Tempo e beat"],
+      ["Beat e accento", "Volume del beat · Accento ogni 5 anni", "Tempo e beat"],
+      ["Respiro lento", "Respiro lento", "Voci"],
+      ["Smussamento di s (¼ di anno)", "fisso", "—"]
+    ];
+    const t = el("table", { class: "map" }, [el("thead", {}, [el("tr", {}, ["Concetto", "Controllo nel tool", "Sezione"].map(h => el("th", { text: h })))]),
+      el("tbody", {}, rows.map(r => el("tr", {}, r.map(c => el("td", { text: c })))))]);
+    lab.append(el("div", { class: "table-wrap" }, [t]));
+    lab.append(el("a", { class: "big-link", href: "lab.html", text: "Apri «Sottomissioni in Suono» →" }));
+    lab.append(el("p", { class: "cap", text: "Il tool si apre in questa stessa finestra. Per tornare al tutorial usa il pulsante Indietro del browser." }));
+  }
+});
+
 // @slides-end
 
 // ---------------- navigazione ----------------
