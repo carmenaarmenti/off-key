@@ -4,7 +4,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: banco di lavoro. A sinistra i parametri in sezioni richiudibili, a destra ascolto, spettrogramma 3D, barra del tempo e dati, ognuno su una propria scheda. Su telefono si impila. */
+/* Layout: a workbench. Collapsible parameter sections on the left; listening, 3D spectrogram, time bar and data on the right, each on its own card. Stacks on phones. */
 :root {
   --bg: #f6f6fa;
   --panel: #ffffff;
@@ -62,7 +62,7 @@ header p { margin: 6px 0 0; color: var(--muted); max-width: 62ch; }
 }
 .main { display: grid; gap: 16px; min-width: 0; }
 
-/* sezioni dei controlli */
+/* control sections */
 details.group + details.group { border-top: 1px solid var(--line); }
 details.group > summary {
   list-style: none; cursor: pointer; padding: 15px 0; display: flex; justify-content: space-between; align-items: center;
@@ -105,7 +105,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-v
 .explain-toggle { font-size: 0.82rem; color: var(--muted); background: var(--panel); }
 .explain-toggle[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
 
-/* ascolto */
+/* listening */
 .transport { background: var(--panel); border-radius: 18px; box-shadow: var(--shadow); padding: 16px 22px; display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: center; }
 .play { width: 54px; height: 54px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); border: 0; display: grid; place-items: center; flex: none; padding: 0; transition: transform 0.15s; }
 .play:hover { transform: scale(1.05); }
@@ -124,7 +124,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-v
 @keyframes pulse { to { opacity: 0.3; } }
 @media (prefers-reduced-motion: reduce) { .status.busy .dot { animation: none; } }
 
-/* spettrogramma */
+/* spectrogram */
 .stage { position: relative; background: var(--plot-bg); border-radius: 18px; overflow: hidden; height: clamp(340px, 58vh, 620px); box-shadow: var(--shadow); }
 .stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 .labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
@@ -139,7 +139,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-v
 .legend-cm { position: absolute; right: 16px; bottom: 14px; display: flex; align-items: center; gap: 8px; font: 0.68rem var(--font-mono); color: var(--muted); }
 .legend-cm i { width: 90px; height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--cm0), var(--cm1), var(--cm2), var(--cm3), var(--cm4)); }
 
-/* barra del tempo */
+/* time bar */
 .timeline { display: flex; align-items: flex-start; gap: 12px; padding-inline: 4px; }
 .step { width: 34px; height: 34px; padding: 0; display: grid; place-items: center; flex: none; background: var(--panel); border: 0; box-shadow: var(--shadow); }
 .step svg { width: 12px; height: 12px; fill: currentColor; }
@@ -151,7 +151,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-v
 .tl-ticks b { position: absolute; top: 11px; transform: translateX(-50%); font: 400 0.68rem var(--font-mono); color: var(--muted); }
 .help.read { margin-top: -6px; padding-inline: 4px; }
 
-/* dati */
+/* data */
 .chart { background: var(--panel); border-radius: 18px; box-shadow: var(--shadow); padding: 18px 22px; display: grid; gap: 10px; }
 .chart-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: baseline; }
 .chart-head h2 { font: 500 0.72rem var(--font-mono); letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); margin: 0; }
@@ -268,7 +268,7 @@ function smooth(a, sigma) {
 function median(arr) { const s = arr.slice().sort((a, b) => a - b); const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; }
 function anomaly(vals, p) {
   const norm = median(vals.filter((_, i) => YEARS[i] <= BASE_END));
-  // saturazione per conferenza (solo audio singoli): la stranezza vale 1 nell'anno di picco
+  // per-conference saturation (single conferences only): strangeness reaches 1 in the peak year
   const sat = p.satMode === "own" && p.mode !== "chord"
     ? Math.max(0.05, Math.max(...vals) / norm - p.threshold) : p.saturate;
   return vals.map(v => Math.min(1, Math.max(0, (v / norm - p.threshold) / sat)));
@@ -290,7 +290,7 @@ function render(p) {
   const NP = p.partials, nyq = 0.45 * SR, TWO_PI = 2 * Math.PI;
   const fadeN = Math.round(0.4 * SR);
 
-  // tavola della voce fantasma: la stessa nota, pura e immobile
+  // ghost voice wavetable: the same note, clean and unchanging
   const TB = 4096, table = new Float32Array(TB);
   for (let k = 1; k <= NP; k++) { const a = Math.pow(k, -2.2); for (let i = 0; i < TB; i++) table[i] += a * Math.sin(TWO_PI * k * i / TB); }
   let tm = 0; for (let i = 0; i < TB; i++) tm = Math.max(tm, Math.abs(table[i])); for (let i = 0; i < TB; i++) table[i] /= tm;
@@ -311,7 +311,7 @@ function render(p) {
     for (let j = 0; j < 400; j++) cv[j] = s[Math.min(n - 1, Math.round(j / 399 * (n - 1)))];
     curves[vc.name] = cv;
 
-    // parametri lenti calcolati ogni BS campioni (control rate) e interpolati
+    // slow parameters computed every BS samples (control rate) and interpolated
     const BS = 32, nb = Math.ceil(n / BS);
     const sC = new Float32Array(nb + 1), fC = new Float32Array(nb + 1);
     for (let b = 0; b <= nb; b++) sC[b] = s[Math.min(n - 1, b * BS)];
@@ -494,7 +494,7 @@ const FX_INFO = {
     help: "Amplifies the waveform and folds it back on itself when it exceeds the limit. Many new partials appear and the sound becomes rougher." }
 };
 
-// ---------- pannello di controllo ----------
+// ---------- control panel ----------
 const controls = document.getElementById("controls");
 const el = (tag, attrs = {}, children = []) => {
   const e = document.createElement(tag);
@@ -534,13 +534,13 @@ function checkbox(id, label, get, set) {
   updaters.push(() => { input.checked = get(); });
   return el("label", { class: "check", for: id }, [input, label]);
 }
-// sezione richiudibile: il contenuto va in .group-body
+// collapsible section: its content goes in .group-body
 function section(title, kids, open = false) {
   const d = el("details", { class: "group" }, [el("summary", { text: title }), el("div", { class: "group-body" }, kids)]);
   d.open = open;
   return d;
 }
-// spiegazioni nascoste di default, ricordate nel browser di chi usa il tool
+// explanations hidden by default, remembered in the viewer's browser
 const explainBtn = document.getElementById("explain");
 function setExplain(on) {
   document.body.classList.toggle("explain", on);
@@ -702,7 +702,7 @@ playBtn.addEventListener("click", () => {
 });
 function seek(t) { if (!audio) return; t = Math.max(0, Math.min(audio.dur - 0.05, t)); if (playing) startPlayback(t); else offset = t; drawChart(); }
 
-// ---------- barra del tempo ----------
+// ---------- time bar ----------
 const scrub = document.getElementById("scrub"), ticksEl = document.getElementById("ticks");
 let scrubbing = false, resumeAfter = false;
 YEARS.forEach((y, i) => {
@@ -729,7 +729,7 @@ function stepYear(d) {
 document.getElementById("prevYear").addEventListener("click", () => stepYear(-1));
 document.getElementById("nextYear").addEventListener("click", () => stepYear(1));
 
-// ---------- indicatori ----------
+// ---------- indicators ----------
 const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 const voiceColor = n => css(`--${n.toLowerCase()}`);
 const metersEl = document.getElementById("meters"), keysEl = document.getElementById("keys");
@@ -761,7 +761,7 @@ function updateIndicators() {
   }
 }
 
-// ---------- grafico dei dati ----------
+// ---------- data chart ----------
 const chart = document.getElementById("chart"), cctx = chart.getContext("2d");
 const CH = { padL: 44, padR: 12, padT: 10, split: 0.6, gap: 22, padB: 22 };
 function drawChart() {
@@ -773,18 +773,18 @@ function drawChart() {
   const x0 = CH.padL, x1 = w - CH.padR, top0 = CH.padT, top1 = (h - CH.padB) * CH.split, bot0 = top1 + CH.gap, bot1 = h - CH.padB;
   const xs = i => x0 + (i + 0.5) / YEARS.length * (x1 - x0);
   cctx.font = `11px ${css("--font-mono")}`; cctx.fillStyle = ink; cctx.strokeStyle = line; cctx.lineWidth = 1;
-  // assi superiori
+  // top axes
   const ymax = 1200, ys = v => top1 - v / ymax * (top1 - top0);
   cctx.textAlign = "right"; cctx.textBaseline = "middle";
   for (const v of [0, 400, 800, 1200]) { cctx.beginPath(); cctx.moveTo(x0, ys(v)); cctx.lineTo(x1, ys(v)); cctx.stroke(); cctx.fillText(String(v), x0 - 6, ys(v)); }
-  // assi inferiori
+  // bottom axes
   const ss = v => bot1 - v * (bot1 - bot0);
   for (const v of [0, 1]) { cctx.beginPath(); cctx.moveTo(x0, ss(v)); cctx.lineTo(x1, ss(v)); cctx.stroke(); cctx.fillText(String(v), x0 - 6, ss(v)); }
   cctx.save(); cctx.translate(10, (bot0 + bot1) / 2); cctx.rotate(-Math.PI / 2); cctx.textAlign = "center"; cctx.fillText("strange", 0, 0); cctx.restore();
-  // anni
+  // years
   cctx.textAlign = "center"; cctx.textBaseline = "top";
   YEARS.forEach((y, i) => { if (y % 5 === 0 || i === 0) cctx.fillText(String(y), xs(i), bot1 + 6); });
-  // serie
+  // series
   const single = renderedMode !== "chord";
   for (const n of NAMES) {
     const c = voiceColor(n);
@@ -801,7 +801,7 @@ function drawChart() {
     }
   }
   cctx.globalAlpha = 1;
-  // testina
+  // playhead
   if (audio) {
     const px = x0 + position() / audio.dur * (x1 - x0);
     cctx.strokeStyle = css("--accent"); cctx.lineWidth = 2; cctx.beginPath(); cctx.moveTo(px, top0); cctx.lineTo(px, bot1); cctx.stroke();
@@ -815,7 +815,7 @@ chart.addEventListener("click", e => {
   seek(yi * audio.dur / YEARS.length);
 });
 
-// ---------- spettrogramma 3D ----------
+// ---------- 3D spectrogram ----------
 const W = 10, D = 6, H = 2.4;
 let renderer, scene, camera, orbit, mesh, geom, playhead, labelsEl = document.getElementById("labels"), labelItems = [], axisGroup;
 const stage = document.getElementById("stage");
@@ -876,7 +876,7 @@ function buildAxes() {
   const mat = new THREE.LineBasicMaterial({ color: new THREE.Color(css("--muted")) });
   const seg = [];
   const fx = i => ((i + 0.5) / YEARS.length - 0.5) * W, front = D / 2;
-  // cornice
+  // frame
   seg.push(-W / 2, 0, front, W / 2, 0, front, -W / 2, 0, -front, W / 2, 0, -front, -W / 2, 0, front, -W / 2, 0, -front, W / 2, 0, front, W / 2, 0, -front);
   YEARS.forEach((y, i) => {
     const len = y % 5 === 0 ? 0.3 : 0.14;
@@ -926,7 +926,7 @@ function updateMesh() {
   updateBars();
 }
 
-// vista a barre: una barra per anno, una fila di barre per ogni fascia di frequenze
+// bars view: one bar per year, one row of bars per frequency band
 const NB = 24;
 let bars = null, barVals = null, barYear = -2, viewMode = "surface";
 function updateBars() {
@@ -1015,7 +1015,7 @@ function frame(now) {
   updateLabels();
 }
 
-// ---------- esportazione ----------
+// ---------- export ----------
 const toast = document.getElementById("toast");
 function settingsJson() {
   const { view, ...rest } = P;
@@ -1037,7 +1037,7 @@ saveBtn.addEventListener("click", async () => {
 if (window.claude && window.claude.use) window.claude.use("downloads").then(d => { downloads = d; if (!d) saveBtn.hidden = true; }).catch(() => { saveBtn.hidden = true; });
 else saveBtn.hidden = true;
 
-// ---------- avvio ----------
+// ---------- startup ----------
 const mq = window.matchMedia("(prefers-color-scheme: dark)");
 (mq.addEventListener ? mq.addEventListener("change", applyTheme) : mq.addListener(applyTheme));
 new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
