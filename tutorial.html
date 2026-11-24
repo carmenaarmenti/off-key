@@ -551,6 +551,108 @@ addSlide({
   }
 });
 
+// ---------- strumenti per le slide sulla nota: parziali, spettro, forma d'onda ----------
+const NOTES = [[110, "La2 · 110 Hz"], [146.83, "Re3 · 147 Hz"], [220, "La3 · 220 Hz"], [293.66, "Re4 · 294 Hz"]];
+const PHASE = k => (k * 2.399963) % (2 * Math.PI);
+// parziali della nota per un valore di s (senza jitter, che è casuale)
+function partialsOf(o) {
+  const fx = Object.assign({}, NOFX, o.fx), s = o.s || 0;
+  const f = o.f0 * Math.pow(2, (o.dir || 1) * fx.detune * s / 1200), B = fx.inharm / 1000, out = [];
+  for (let k = 1; k <= o.N; k++) {
+    const fk = k * f * Math.sqrt(1 + B * s * k * k);
+    if (fk >= 0.45 * DEF.sr) break;
+    out.push({ k, f: fk, a: Math.pow(k, -2.2 + fx.bright * s) });
+  }
+  return out;
+}
+// un periodo della nota armonica (con tilt), normalizzato e poi ripiegato come nel motore
+function cycleOf(o, n = 600, foldOn = true) {
+  const fx = Object.assign({}, NOFX, o.fx), s = o.s || 0;
+  const ps = partialsOf({ f0: o.f0, N: o.N, s, fx: { bright: fx.bright } });
+  const x = new Float32Array(n); let m = 0;
+  for (let i = 0; i < n; i++) { const th = 2 * Math.PI * i / n; let v = 0; for (const p of ps) v += p.a * Math.sin(p.k * th + PHASE(p.k)); x[i] = v; m = Math.max(m, Math.abs(v)); }
+  for (let i = 0; i < n; i++) {
+    let v = x[i] / (m || 1);
+    if (foldOn && fx.fold > 0) v = (1 - s) * v + s * Math.sin(Math.PI / 2 * (1 + fx.fold * s) * v);
+    x[i] = v;
+  }
+  return x;
+}
+// ampiezze armoniche di un periodo (DFT), in dB rispetto al massimo
+function harmonicsOf(cyc, K = 60) {
+  const n = cyc.length, out = [];
+  for (let k = 1; k <= K; k++) { let re = 0, im = 0; for (let i = 0; i < n; i++) { const th = 2 * Math.PI * k * i / n; re += cyc[i] * Math.cos(th); im -= cyc[i] * Math.sin(th); } out.push(2 * Math.hypot(re, im) / n); }
+  return out;
+}
+const db = a => 20 * Math.log10(Math.max(a, 1e-9));
+function niceFreqTicks(fmax) { const step = fmax > 6000 ? 2000 : fmax > 2500 ? 1000 : 500; const t = []; for (let f = 0; f <= fmax; f += step) t.push(f); return t; }
+function drawSpectrum(ctx, w, h, o) {
+  const dbMin = o.dbMin ?? -70, ref = o.ref ?? 1;
+  const a = axes(ctx, w, h, { x0: 0, x1: o.fmax, y0: dbMin, y1: 0, yTicks: [0, -20, -40, -60].filter(v => v >= dbMin), yFmt: v => v + " dB",
+    xTicks: niceFreqTicks(o.fmax), xFmt: f => f >= 1000 ? (f / 1000) + "k" : String(f), xLabel: "Hz", m: { l: 54 } });
+  if (o.grid) { ctx.strokeStyle = css("--line"); ctx.setLineDash([2, 3]); for (const f of o.grid) { if (f > o.fmax) break; ctx.beginPath(); ctx.moveTo(a.X(f), a.m.t); ctx.lineTo(a.X(f), h - a.m.b); ctx.stroke(); } ctx.setLineDash([]); }
+  const stems = (parts, color, width, dot) => {
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = width;
+    for (const p of parts) { if (p.f > o.fmax) continue; const y = a.Y(Math.max(dbMin, db(p.a / ref))); ctx.beginPath(); ctx.moveTo(a.X(p.f), a.Y(dbMin)); ctx.lineTo(a.X(p.f), y); ctx.stroke(); if (dot) { ctx.beginPath(); ctx.arc(a.X(p.f), y, 2.6, 0, 7); ctx.fill(); } }
+  };
+  if (o.ghost) stems(o.ghost, css("--ghost"), 3, false);
+  stems(o.parts, css("--accent"), 1.5, true);
+  ctx.lineWidth = 1;
+  return a;
+}
+function drawWave(ctx, w, h, o) {
+  const periods = o.periods || 2, ms = 1000 / o.f0;
+  const a = axes(ctx, w, h, { x0: 0, x1: periods * ms, y0: -1.1, y1: 1.1, yTicks: [-1, 0, 1], xTicks: Array.from({ length: periods + 1 }, (_, i) => i * ms),
+    xFmt: v => fmtN(v, 1) + " ms", m: { l: 30 } });
+  const line = (cyc, color, width) => {
+    ctx.strokeStyle = color; ctx.lineWidth = width; ctx.beginPath(); const n = cyc.length;
+    for (let i = 0; i <= n * periods; i++) { const x = a.X(i / n * ms), y = a.Y(cyc[i % n]); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+    ctx.stroke();
+  };
+  if (o.before) line(o.before, css("--ghost"), 1.5);
+  line(o.cyc, css("--accent"), 2); ctx.lineWidth = 1;
+}
+
+addSlide({
+  id: "nota", chain: "Nota", kicker: "Passo 2 · Sorgente",
+  title: "La nota di partenza è una somma di parziali",
+  text: `
+    <p>Ogni suono periodico può essere scomposto in una somma di sinusoidi (serie di Fourier). Ogni sinusoide è una <b>parziale</b>, con una frequenza e un'ampiezza. Lo <b>spettro</b> è il grafico che mostra, per ogni frequenza, l'ampiezza della parziale corrispondente.</p>
+    <p>La nota di partenza è <b>armonica</b>: la parziale k ha frequenza esattamente k · f₀, multiplo intero della <b>fondamentale</b> f₀. Le parziali armoniche si fondono e l'orecchio percepisce una sola nota, con altezza f₀. Il numero di parziali e le loro ampiezze determinano il <b>timbro</b>.</p>
+    <div class="formula">
+      <div>x(t) = Σₖ Aₖ · sin(2π · k · f₀ · t + φₖ),   k = 1 … N</div>
+      <div>Aₖ = k^−2,2   (−13,2 dB per ottava)</div>
+    </div>
+    <p>Con Aₖ = k<sup>−2,2</sup> l'ampiezza scende rapidamente: la 10ª parziale è 44 dB sotto la fondamentale. Il timbro è scuro e morbido. Con N = 28 ci sono abbastanza parziali perché gli effetti successivi abbiano materiale su cui agire. Le parziali sopra il 45% della frequenza di campionamento (circa 19,8 kHz) vengono scartate, per evitare aliasing.</p>
+    <p>Le fasi φₖ sono casuali e fisse. Non cambiano l'altezza né il timbro percepito, ma evitano che tutte le parziali raggiungano il picco nello stesso istante.</p>
+    <p>Tutti gli effetti dei passi successivi modificano questa somma: l'altezza f₀ (detune, jitter), la posizione delle parziali (inarmonicità), la loro ampiezza (spectral tilt) e la forma d'onda risultante (wavefolding).</p>
+    <div class="listen"><b>Cosa ascoltare</b><p>La sola fondamentale è una sinusoide: suono puro, senza timbro. Aggiungendo parziali il suono diventa più pieno, ma l'altezza percepita resta la stessa. Nella costruzione progressiva le prime parziali cambiano molto il timbro, le ultime poco, perché sono molto più deboli.</p></div>`,
+  build(lab) {
+    const o = { N: DEF.partials, f0: DEF.f0 };
+    lab.append(el("p", { class: "lab-title", text: "Esperimento" }));
+    const ctls = el("div", { class: "ctls" }); lab.append(ctls);
+    slider(ctls, { label: "Parziali N", min: 1, max: 40, step: 1, value: o.N, fmt: v => String(v), onInput: v => { o.N = v; redraw(); } });
+    seg(ctls, { label: "Fondamentale f₀", options: NOTES, value: o.f0, onChange: v => { o.f0 = v; redraw(); } });
+    const spec = plot(lab, 200, (ctx, w, h) => drawSpectrum(ctx, w, h, { parts: partialsOf({ f0: o.f0, N: o.N }), fmax: Math.min(12000, Math.max(1500, o.f0 * o.N * 1.05)) }),
+      "Spettro: ogni linea è una parziale, a k · f₀. L'altezza è l'ampiezza in dB rispetto alla fondamentale.");
+    const wave = plot(lab, 130, (ctx, w, h) => drawWave(ctx, w, h, { f0: o.f0, cyc: cycleOf({ f0: o.f0, N: o.N }) }), "Forma d'onda: due periodi della somma.");
+    const ro = el("div", { class: "readout" }); lab.append(ro);
+    function redraw() {
+      spec.redraw(); wave.redraw();
+      const ps = partialsOf({ f0: o.f0, N: o.N }), last = ps[ps.length - 1];
+      ro.innerHTML = `<div><span>fondamentale:</span> ${fmtN(o.f0, 2)} Hz · periodo ${fmtN(1000 / o.f0, 2)} ms</div>
+        <div><span>parziale più alta:</span> k = ${last.k}, ${fmtN(last.f, 0)} Hz, ${fmtN(db(last.a), 1)} dB</div>`;
+    }
+    redraw();
+    const job = (N, extra = {}) => Object.assign({ dur: 2.5, partials: N, fx: NOFX, voices: [voice({ f0: o.f0 })] }, extra);
+    plays(lab, [
+      { label: "Solo fondamentale (N = 1)", onClick: () => playJobs([job(1)], "Sinusoide alla fondamentale") },
+      { label: "Nota con N parziali", primary: true, onClick: () => playJobs([job(o.N)], `Nota armonica, ${o.N} parziali`) },
+      { label: "Costruzione: una parziale ogni 0,2 s", onClick: () => playJobs([job(o.N, { dur: o.N * 0.2 + 1.5, buildup: 0.2 })], "Aggiunta progressiva delle parziali") }
+    ]);
+  }
+});
+
 // @slides-end
 
 // ---------------- navigazione ----------------
