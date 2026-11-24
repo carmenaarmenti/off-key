@@ -129,7 +129,8 @@ details.opts .knobs { padding-top: 12px; }
 .chain li::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--surface); border: 2px solid var(--faint); justify-self: center; z-index: 1; }
 .chain li::after { content: ""; position: absolute; left: 8px; top: 0; bottom: 0; width: 2px; background: var(--line); }
 .chain li:first-child::after { top: 50%; } .chain li:last-child::after { bottom: 50%; }
-.chain li.fx::before { border-color: var(--accent); background: var(--accent); }
+.chain li.fx::before { border-color: var(--accent); }
+.chain-note { font-size: 0.82rem; color: var(--muted); margin: -4px 0 0; }
 .chain li b { font-weight: 500; }
 .chain li small { font: 0.75rem var(--font-mono); color: var(--muted); }
 .chain li em { font: normal 500 0.72rem var(--font-mono); color: var(--accent); }
@@ -546,13 +547,14 @@ addSlide({
   lead: "Submissions to ICSE, FSE and ASE become a single value, strangeness s, which turns every knob in a chain of effects at once.",
   formula: ["effect(t) = depth × s(t)"],
   hear: "At s = 0 the note stays clean. The further the data drift from the past, the more all the effects act together.",
-  more: `<p>Each step adds one link to the chain, in the order the program computes it. On the right is an experiment with <b>a single effect active</b> on one note: move s, play the ramp from 0 to 1, and compare the clean note with the transformed one.</p>
+  more: `<p>Each step adds one link to the chain, in the order the program computes it. On every effect slide, the panel on the right is an experiment with <b>only that effect active</b> on one note: move s, play the ramp from 0 to 1, and compare the clean note with the transformed one. This first slide shows the whole chain instead, and its button plays all the effects together.</p>
     <p>When an effect is clear, press "Got it". You can return to any step from the bar at the top or with the ← and → keys.</p>`,
   build(t) {
     const steps = [["Submissions", "20 values per conference", ""], ["Strangeness s(t)", "from 0 to 1", ""], ["Note", "sum of partials", ""],
       ["Detune", "pitch", "× s"], ["Jitter", "pitch", "× s"], ["Inharmonicity", "partial positions", "× s"], ["Spectral tilt", "partial amplitudes", "× s"],
       ["Wavefolding", "waveform", "× s"], ["Ghost voice", "fixed reference", ""], ["Chord and beat", "mix and time", ""]];
     t.append(el("ol", { class: "chain" }, steps.map(([a, b, c]) => el("li", { class: c ? "fx" : "" }, [el("div", {}, [el("b", { text: a }), el("br"), el("small", { text: b })]), c ? el("em", { text: c }) : el("span")]))));
+    t.append(el("p", { class: "chain-note", text: "Steps marked × s are effects whose amount follows strangeness. The next slides play them one at a time; the final result below combines all five." }));
     listen(t, { label: "Hear the final result", run: b => playJobs(b, [fullPieceJob()], "full piece · 20 years") });
   }
 });
