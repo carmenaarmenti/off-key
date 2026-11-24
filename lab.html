@@ -95,6 +95,15 @@ input[type="range"]::-moz-range-track { height: 4px; border-radius: 2px; backgro
 input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--ink); margin-top: -6px; border: 0; }
 input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--ink); border: 0; }
 input[type="range"]:disabled { opacity: 0.3; cursor: default; }
+/* year ticks under a year slider: one per year, centred under the thumb (16px wide, so inset by 8px), the baseline years in the accent colour */
+.ticks { position: relative; height: 22px; margin-top: -2px; font: 0.68rem var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.ticks i { position: absolute; top: 0; width: 1px; height: 5px; background: var(--line); transform: translateX(-50%); }
+.ticks i.long { height: 8px; background: var(--muted); }
+.ticks i.in { background: var(--accent); }
+.ticks b { position: absolute; top: 9px; font-weight: 400; transform: translateX(-50%); white-space: nowrap; }
+.ticks b.first { transform: translateX(-8px); }
+.ticks b.last { transform: translateX(calc(-100% + 8px)); }
+.ticks b.in { color: var(--accent); }
 input[type="checkbox"] { accent-color: var(--accent); width: 15px; height: 15px; margin: 0; }
 .fx { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
 .fx.off .ctl { opacity: 0.45; }
@@ -541,16 +550,30 @@ function infoBtn(label) {
   return b;
 }
 const lbl = (label, labelEl, help) => el("div", { class: "lbl" }, [labelEl, help ? infoBtn(label) : null]);
-function slider({ id, label, min, max, step, get, set, fmt, help, kind = "render" }) {
+// Ticks for a slider over years: one per year, labels every 5 (every 10 for long ranges) plus both ends.
+// update(v) highlights the years from min to v, the ones the slider currently includes.
+function yearTicks(min, max) {
+  const node = document.createElement("div"), n = max - min, step = n > 30 ? 10 : 5, marks = [];
+  node.className = "ticks"; node.setAttribute("aria-hidden", "true");
+  const at = y => `calc(8px + (100% - 16px) * ${n ? (y - min) / n : 0})`;
+  for (let y = min; y <= max; y++) {
+    const labelled = y === min || y === max || (y % step === 0 && y - min >= step * 0.6 && max - y >= step * 0.6);
+    const t = document.createElement("i"); t.style.left = at(y); if (labelled) t.className = "long"; node.append(t); marks.push([y, t]);
+    if (labelled) { const b = document.createElement("b"); b.textContent = y; b.style.left = at(y); if (y === min) b.className = "first"; else if (y === max) b.className = "last"; node.append(b); marks.push([y, b]); }
+  }
+  return { node, update(v) { marks.forEach(([y, e]) => e.classList.toggle("in", y <= v)); } };
+}
+function slider({ id, label, min, max, step, get, set, fmt, help, kind = "render", years = false }) {
   const val = el("span", { class: "val" });
   const input = el("input", { type: "range", id, min, max, step });
   input.value = get();
-  const sync = () => { input.value = get(); val.textContent = fmt(get()); };
-  input.addEventListener("input", () => { set(parseFloat(input.value)); val.textContent = fmt(get()); schedule(kind); });
+  const ticks = years ? yearTicks(min, max) : null;
+  const sync = () => { input.value = get(); val.textContent = fmt(get()); if (ticks) ticks.update(get()); };
+  input.addEventListener("input", () => { set(parseFloat(input.value)); val.textContent = fmt(get()); if (ticks) ticks.update(get()); schedule(kind); });
   updaters.push(sync); sync();
   return el("div", { class: "ctl" }, [
     el("div", { class: "ctl-head" }, [lbl(label, el("label", { for: id, text: label }), help), val]),
-    input, help ? el("p", { class: "help", text: help }) : null
+    input, ticks ? ticks.node : null, help ? el("p", { class: "help", text: help }) : null
   ]);
 }
 function segmented(id, label, options, get, set) {
@@ -617,7 +640,7 @@ controls.append(
       "Adds a low 62 Hz thump to the beat in 2010, 2015, 2020 and 2025, to help you find your place in time.")
   ]),
   section("From data to strangeness", [
-    slider({ id: "baseEnd", label: "Baseline period", min: 2006, max: 2024, step: 1, get: () => P.baseEnd, set: v => P.baseEnd = v, fmt: v => v === 2006 ? "2006 only" : `2006–${v}`,
+    slider({ id: "baseEnd", label: "Baseline period", min: 2006, max: 2024, step: 1, years: true, get: () => P.baseEnd, set: v => P.baseEnd = v, fmt: v => v === 2006 ? "2006 only" : `2006–${v}`,
       help: "The years treated as the normal past. Each conference's baseline is the median of its submissions over these years, and every year is then measured against it. Ending the period later folds part of the recent growth into the baseline, so less of it sounds strange; ending it earlier makes the growth stand out more. The default is 2006–2015." }),
     slider({ id: "thr", label: "Threshold", min: 1, max: 2, step: 0.05, get: () => P.threshold, set: v => P.threshold = v, fmt: v => `${v.toFixed(2)}× baseline`,
       help: "Strangeness starts above this multiple of the baseline, the median of the conference's submissions over the baseline period. Below it, variation from year to year counts as normal and s stays at 0. For example, 1.25 means 25% above the baseline." }),

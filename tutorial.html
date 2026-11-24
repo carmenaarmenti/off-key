@@ -116,6 +116,15 @@ input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius
 .knob.main input[type="range"]::-webkit-slider-thumb { background: var(--accent); width: 20px; height: 20px; margin-top: -8px; }
 .knob.main input[type="range"]::-moz-range-thumb { background: var(--accent); width: 20px; height: 20px; }
 input[type="range"]:disabled { opacity: 0.35; }
+/* year ticks under a year slider: one per year, centred under the thumb (16px wide, so inset by 8px), the baseline years in the accent colour */
+.ticks { position: relative; height: 22px; margin-top: -2px; font: 0.68rem var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.ticks i { position: absolute; top: 0; width: 1px; height: 5px; background: var(--line); transform: translateX(-50%); }
+.ticks i.long { height: 8px; background: var(--muted); }
+.ticks i.in { background: var(--accent); }
+.ticks b { position: absolute; top: 9px; font-weight: 400; transform: translateX(-50%); white-space: nowrap; }
+.ticks b.first { transform: translateX(-8px); }
+.ticks b.last { transform: translateX(calc(-100% + 8px)); }
+.ticks b.in { color: var(--accent); }
 
 .listen { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
 .play { display: inline-flex; align-items: center; gap: 12px; border: 0; background: none; padding: 0; font: 600 0.95rem var(--font-text); color: var(--ink); cursor: pointer; }
@@ -428,14 +437,28 @@ function el(tag, attrs = {}, kids = []) {
   return e;
 }
 let uid = 0;
+// Ticks for a slider over years: one per year, labels every 5 (every 10 for long ranges) plus both ends.
+// update(v) highlights the years from min to v, the ones the slider currently includes.
+function yearTicks(min, max) {
+  const node = document.createElement("div"), n = max - min, step = n > 30 ? 10 : 5, marks = [];
+  node.className = "ticks"; node.setAttribute("aria-hidden", "true");
+  const at = y => `calc(8px + (100% - 16px) * ${n ? (y - min) / n : 0})`;
+  for (let y = min; y <= max; y++) {
+    const labelled = y === min || y === max || (y % step === 0 && y - min >= step * 0.6 && max - y >= step * 0.6);
+    const t = document.createElement("i"); t.style.left = at(y); if (labelled) t.className = "long"; node.append(t); marks.push([y, t]);
+    if (labelled) { const b = document.createElement("b"); b.textContent = y; b.style.left = at(y); if (y === min) b.className = "first"; else if (y === max) b.className = "last"; node.append(b); marks.push([y, b]); }
+  }
+  return { node, update(v) { marks.forEach(([y, e]) => e.classList.toggle("in", y <= v)); } };
+}
 function knob(parent, o) {
   const id = `k${++uid}`, out = el("output", { for: id });
   const input = el("input", { type: "range", id, min: o.min, max: o.max, step: o.step });
   input.value = o.value;
-  const show = () => { out.textContent = o.fmt(parseFloat(input.value)); };
+  const ticks = o.years ? yearTicks(o.min, o.max) : null;
+  const show = () => { out.textContent = o.fmt(parseFloat(input.value)); if (ticks) ticks.update(parseFloat(input.value)); };
   input.addEventListener("input", () => { show(); o.onInput(parseFloat(input.value)); });
   show();
-  parent.append(el("div", { class: "knob" + (o.main ? " main" : "") }, [el("div", { class: "knob-head" }, [el("label", { for: id, text: o.label }), out]), input]));
+  parent.append(el("div", { class: "knob" + (o.main ? " main" : "") }, [el("div", { class: "knob-head" }, [el("label", { for: id, text: o.label }), out]), input, ticks ? ticks.node : null]));
   return { input, set(v) { input.value = v; show(); } };
 }
 function chips(parent, o) {
@@ -738,7 +761,7 @@ addSlide({
     });
     const st = stats(t);
     const k = el("div", { class: "knobs" }); t.append(k);
-    knob(k, { label: "Baseline period", min: YEARS[0], max: lastYear() - 1, step: 1, value: o.baseEnd, fmt: v => span(v), onInput: v => { o.baseEnd = v; redraw(); } });
+    knob(k, { label: "Baseline period", min: YEARS[0], max: lastYear() - 1, step: 1, years: true, value: o.baseEnd, fmt: v => span(v), onInput: v => { o.baseEnd = v; redraw(); } });
     knob(k, { label: "Threshold", min: 1, max: 2, step: 0.05, value: o.threshold, fmt: v => fmtN(v) + "×", onInput: v => { o.threshold = v; redraw(); } });
     const sat = knob(k, { label: "Saturation", min: 0.3, max: 3, step: 0.05, value: o.saturate, fmt: v => "+" + fmtN(v), onInput: v => { o.saturate = v; redraw(); } });
     knob(k, { label: "Exponent γ", min: 0.5, max: 3, step: 0.05, value: o.gamma, fmt: v => fmtN(v), onInput: v => { o.gamma = v; redraw(); } });
