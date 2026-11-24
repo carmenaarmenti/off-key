@@ -580,6 +580,7 @@ controls.append(section("Spettrogramma", [
     help: "Intervallo di intensità mostrato, dal massimo verso il basso. Valori più alti rendono visibili anche le componenti deboli." })
 ]));
 function syncAll() { updaters.forEach(f => f()); }
+syncAll();
 
 // ---------- worker ----------
 let worker = null;
