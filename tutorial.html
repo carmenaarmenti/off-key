@@ -770,6 +770,41 @@ effectSlide({
   }
 });
 
+effectSlide({
+  id: "inarmonicita", key: "inharm", chain: "Inarmonicità", kicker: "Passo 5 · Posizione delle parziali",
+  title: "Inarmonicità: parziali fuori dalla serie armonica",
+  depth: { label: "Coefficiente B", min: 0, max: 6, step: 0.1, value: DEF.fx.inharm, fmt: v => `${fmtN(v, 1)}‰` },
+  text: `
+    <p>Finora le parziali stavano esattamente a multipli interi di f₀. L'inarmonicità le sposta verso l'alto, tanto più quanto più alto è il loro numero k:</p>
+    <div class="formula">
+      <div>fₖ(t) = k · f(t) · √(1 + B · s(t) · k²)</div>
+    </div>
+    <p>È il modello fisico della <b>corda rigida</b>. Una corda reale ha una propria rigidità, che aumenta la frequenza dei modi di vibrazione più alti. Lo stesso fenomeno, in piccolo, fa sì che negli strumenti a corda percossa le parziali acute siano leggermente crescenti. B è il coefficiente di inarmonicità: con B = 2,5‰ e s = 1 la 2ª parziale sale dello 0,5%, la 10ª dell'11,8% (circa 2 semitoni), la 20ª del 41%.</p>
+    <p>Lo spostamento cresce con k², quindi le prime parziali restano quasi al loro posto e quelle alte si allontanano molto. La distanza tra parziali vicine non è più costante.</p>
+    <h3>Perché si percepisce</h3>
+    <p>Il sistema uditivo raggruppa in una sola nota le parziali che stanno in rapporti interi, e assegna loro l'altezza della fondamentale. Quando i rapporti non sono più interi, il raggruppamento si indebolisce: l'altezza diventa ambigua e il timbro metallico. È il caso di campane, gong e piastre, i cui modi di vibrazione sono naturalmente inarmonici.</p>
+    <p>Nello spettrogramma del tool questo effetto produce le creste che si curvano verso l'alto e si allargano a ventaglio negli ultimi anni.</p>
+    <div class="listen"><b>Cosa ascoltare</b><p>La fondamentale resta ferma, ma sopra di lei compare una «nuvola» di componenti che non si fondono più con la nota. Con la rampa si sente il passaggio da una nota a un oggetto sonoro di altezza incerta.</p></div>`,
+  visual(lab, st, sv) {
+    const spec = plot(lab, 190, (ctx, w, h) => {
+      const fmax = 5000, ghost = partialsOf({ f0: st.f0, N: DEF.partials });
+      drawSpectrum(ctx, w, h, { fmax, grid: ghost.map(p => p.f), ghost, parts: partialsOf({ f0: st.f0, N: DEF.partials, s: sv(), fx: { inharm: st.depth } }) });
+    }, "Grigio e linee tratteggiate: posizioni armoniche k · f₀. Colore: parziali con l'inarmonicità attuale.");
+    const dev = plot(lab, 140, (ctx, w, h) => {
+      const B = st.depth / 1000, s = sv(), K = DEF.partials, top = Math.max(10, Math.sqrt(1 + 0.006 * K * K) * 100 - 100);
+      const a = axes(ctx, w, h, { x0: 0.5, x1: K + 0.5, y0: 0, y1: top, yTicks: [0, top / 2, top].map(v => Math.round(v)), yFmt: v => v + "%", xTicks: [1, 5, 10, 15, 20, 25], yLabel: "spostamento" });
+      const bw = (a.X(1) - a.X(0)) * 0.7; ctx.fillStyle = css("--accent");
+      for (let k = 1; k <= K; k++) { const d = (Math.sqrt(1 + B * s * k * k) - 1) * 100; ctx.fillRect(a.X(k) - bw / 2, a.Y(Math.min(top, d)), bw, a.Y(0) - a.Y(Math.min(top, d))); }
+    }, "Spostamento di ogni parziale rispetto alla posizione armonica, in percentuale (asse x: numero k).");
+    return [spec, dev];
+  },
+  readout(st, s) {
+    const B = st.depth / 1000, d = k => Math.sqrt(1 + B * s * k * k), cents = k => 1200 * Math.log2(d(k));
+    return `<div><span>B · s =</span> ${fmtN(B * s * 1000, 2)}‰</div>
+      <div><span>2ª parziale:</span> +${fmtN((d(2) - 1) * 100, 1)}% · <span>10ª:</span> +${fmtN((d(10) - 1) * 100, 1)}% (+${Math.round(cents(10))} cent) · <span>20ª:</span> +${fmtN((d(20) - 1) * 100, 1)}%</div>`;
+  }
+});
+
 // @slides-end
 
 // ---------------- navigazione ----------------
