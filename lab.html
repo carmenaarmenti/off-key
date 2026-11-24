@@ -134,7 +134,8 @@ button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-v
 .labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
 .labels span { position: absolute; left: 0; top: 0; font: 0.68rem var(--font-mono); color: var(--muted); white-space: nowrap; }
 .labels span.title { letter-spacing: 0.06em; text-transform: uppercase; }
-.stage-tools { position: absolute; top: 14px; left: 14px; right: 14px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: center; pointer-events: none; }
+#pitchView { position: absolute; inset: 0; width: 100%; height: 100%; display: block; background: var(--plot-bg); z-index: 1; }
+.stage-tools { z-index: 2; position: absolute; top: 14px; left: 14px; right: 14px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: center; pointer-events: none; }
 .stage-tools > * { pointer-events: auto; }
 .stage-tools .seg { background: var(--panel); padding: 4px; border-radius: 999px; box-shadow: var(--shadow); gap: 2px; }
 .stage-tools .seg button { border: 0; background: transparent; }
@@ -194,6 +195,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-v
 
       <div class="stage" id="stage">
         <canvas id="gl" aria-label="3D spectrogram: time, frequency and intensity"></canvas>
+        <canvas id="pitchView" hidden aria-label="Pitch of each note relative to where it started, over the years"></canvas>
         <div class="labels" id="labels"></div>
         <div class="stage-tools">
           <div class="seg" id="views" role="group" aria-label="View">
@@ -201,6 +203,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-v
             <button data-view="top" aria-pressed="false">Top</button>
             <button data-view="side" aria-pressed="false">Profile</button>
             <button data-view="bars" aria-pressed="false">Bars</button>
+            <button data-view="pitch" aria-pressed="false">Pitch</button>
           </div>
           <span class="hint">Drag to rotate · scroll to zoom · right-drag to pan</span>
         </div>
@@ -215,7 +218,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-v
         </div>
         <button type="button" id="nextYear" class="step" aria-label="Next year"><svg viewBox="0 0 20 20"><path d="M7 4l7 6-7 6z"/></svg></button>
       </div>
-      <p class="help read">Reading the spectrogram: time (years) runs left to right, frequency runs into depth, intensity is height. Each ridge is one partial of the sound. Straight, parallel ridges mean a harmonic, stable sound. Bent, irregular or blurred ridges show the effect of detune, inharmonicity and wavefolding. In the Bars view each bar is a year and each row, from back to front, is a frequency band (low to high). Bar height is the mean intensity of that band in that year, and the year playing is highlighted. Use the slider above to move through time.</p>
+      <p class="help read">Reading the spectrogram: time (years) runs left to right, frequency runs into depth, intensity is height. Each ridge is one partial of the sound. Straight, parallel ridges mean a harmonic, stable sound. Bent, irregular or blurred ridges show the effect of detune, inharmonicity and wavefolding. In the Bars view each bar is a year and each row, from back to front, is a frequency band (low to high). Bar height is the mean intensity of that band in that year, and the year playing is highlighted. In the Pitch view each row is one note: the dashed line is the pitch it started from (its ghost voice), the coloured line shows how far detune moves it down or up over the years, and the light band is the jitter range. Use the slider above to move through time.</p>
 
       <div class="chart">
         <div class="chart-head">
@@ -1044,9 +1047,17 @@ const VIEWS = {
 };
 let camAnim = null;
 const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const legendEl = document.querySelector(".legend-cm"), hintEl = document.querySelector(".hint");
+const HINT_3D = hintEl.textContent, HINT_PITCH = "Up = higher pitch · dashed line = where each note started";
 document.getElementById("views").addEventListener("click", e => {
-  const b = e.target.closest("button"); if (!b || !camera) return;
+  const b = e.target.closest("button"); if (!b) return;
   document.querySelectorAll("#views button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  const pitch = b.dataset.view === "pitch";
+  pitchCv.hidden = !pitch; labelsEl.hidden = pitch; legendEl.hidden = pitch;
+  document.getElementById("gl").style.visibility = pitch ? "hidden" : "";
+  hintEl.textContent = pitch ? HINT_PITCH : HINT_3D;
+  if (pitch) { viewMode = "pitch"; drawPitch(); return; }
+  if (!camera) return;
   const v = VIEWS[b.dataset.view];
   viewMode = v.bars ? "bars" : "surface";
   mesh.visible = !v.bars; bars.visible = !!v.bars; playhead.visible = !v.bars;
@@ -1056,6 +1067,61 @@ document.getElementById("views").addEventListener("click", e => {
   camAnim = { t0: performance.now(), from: { pos: camera.position.clone(), target: orbit.target.clone() }, to };
 });
 
+// ---------- pitch view: how far each note has drifted from where it started ----------
+const pitchCv = document.getElementById("pitchView"), pctx = pitchCv.getContext("2d");
+const NOTE_OF = { ICSE: ["A2", 110], FSE: ["E3", 165], ASE: ["A3", 220] };
+function drawPitch() {
+  const dpr = window.devicePixelRatio || 1, w = pitchCv.clientWidth, h = pitchCv.clientHeight;
+  if (!w || !h) return;
+  if (pitchCv.width !== Math.round(w * dpr) || pitchCv.height !== Math.round(h * dpr)) { pitchCv.width = Math.round(w * dpr); pitchCv.height = Math.round(h * dpr); }
+  pctx.setTransform(dpr, 0, 0, dpr, 0, 0); pctx.clearRect(0, 0, w, h);
+  const chord = renderedMode === "chord";
+  const names = chord ? ["ASE", "FSE", "ICSE"] : [renderedMode]; // highest note on top
+  const det = P.fx.detune.on ? P.fx.detune.amt : 0, jit = P.fx.jitter.on ? P.fx.jitter.amt : 0;
+  const range = Math.max(25, det + jit) * 1.15;
+  const m = { l: w < 560 ? 84 : 124, r: w < 560 ? 64 : 88, t: 64, b: 36 };
+  const laneH = (h - m.t - m.b) / names.length, x0 = m.l, x1 = w - m.r, X = f => x0 + f * (x1 - x0);
+  const frac = audio ? position() / audio.dur : 0, jNow = Math.min(399, Math.max(0, Math.round(frac * 399)));
+  const mono = `11px ${css("--font-mono")}`;
+  pctx.font = mono; pctx.fillStyle = css("--muted"); pctx.textAlign = "center"; pctx.textBaseline = "top";
+  YEARS.forEach((y, i) => { if (y % 5 === 0 || i === 0) pctx.fillText(String(y), X((i + 0.5) / YEARS.length), h - m.b + 12); });
+  names.forEach((n, li) => {
+    const cy = m.t + laneH * (li + 0.5), half = Math.min(laneH / 2 - 8, 90), Y = c => cy - c / range * half;
+    const cv = curves[n], col = voiceColor(n), dir = chord && n === "ICSE" ? -1 : 1;
+    const [note, f0] = chord ? NOTE_OF[n] : [NOTES[P.baseFreq] || "", P.baseFreq];
+    // reference: where the note started, which is also its ghost voice
+    pctx.strokeStyle = css("--faint"); pctx.lineWidth = 1; pctx.setLineDash([4, 4]);
+    pctx.beginPath(); pctx.moveTo(x0, cy); pctx.lineTo(x1, cy); pctx.stroke(); pctx.setLineDash([]);
+    pctx.textAlign = "left"; pctx.textBaseline = "middle";
+    pctx.font = `600 13px ${css("--font-text")}`; pctx.fillStyle = css("--ink"); pctx.fillText(`${n} ${dir < 0 ? "↓" : "↑"}`, 14, cy - 9);
+    pctx.font = mono; pctx.fillStyle = css("--muted"); pctx.fillText(`${note} · ${f0} Hz`, 14, cy + 9);
+    if (!cv) return;
+    const c = j => dir * det * cv[j];
+    // jitter range: a light band around the line
+    if (jit > 0) {
+      pctx.fillStyle = col; pctx.globalAlpha = 0.1; pctx.beginPath();
+      for (let j = 0; j < 400; j++) { const x = X(j / 399), y = Y(c(j) + jit * cv[j]); j ? pctx.lineTo(x, y) : pctx.moveTo(x, y); }
+      for (let j = 399; j >= 0; j--) pctx.lineTo(X(j / 399), Y(c(j) - jit * cv[j]));
+      pctx.closePath(); pctx.fill(); pctx.globalAlpha = 1;
+    }
+    // the trail: drift already played, filled between the start pitch and the line
+    pctx.fillStyle = col; pctx.globalAlpha = 0.16; pctx.beginPath(); pctx.moveTo(X(0), cy);
+    for (let j = 0; j <= jNow; j++) pctx.lineTo(X(j / 399), Y(c(j)));
+    pctx.lineTo(X(jNow / 399), cy); pctx.closePath(); pctx.fill(); pctx.globalAlpha = 1;
+    const stroke = (from, to, alpha, width) => { pctx.strokeStyle = col; pctx.globalAlpha = alpha; pctx.lineWidth = width; pctx.beginPath(); for (let j = from; j <= to; j++) { const x = X(j / 399), y = Y(c(j)); j === from ? pctx.moveTo(x, y) : pctx.lineTo(x, y); } pctx.stroke(); pctx.globalAlpha = 1; pctx.lineWidth = 1; };
+    stroke(jNow, 399, 0.25, 1.5); stroke(0, jNow, 1, 2.4);
+    // the note now
+    const dx = X(jNow / 399), dy = Y(c(jNow));
+    pctx.fillStyle = css("--plot-bg"); pctx.beginPath(); pctx.arc(dx, dy, 8, 0, 7); pctx.fill();
+    pctx.fillStyle = col; pctx.beginPath(); pctx.arc(dx, dy, 5.5, 0, 7); pctx.fill();
+    const now = Math.round(c(jNow));
+    pctx.font = `500 12px ${css("--font-mono")}`; pctx.fillStyle = css("--ink"); pctx.textAlign = "left";
+    pctx.fillText(`${now > 0 ? "+" : now < 0 ? "−" : ""}${Math.abs(now)} cents`, x1 + 10, dy);
+  });
+  if (det === 0) { pctx.font = mono; pctx.fillStyle = css("--muted"); pctx.textAlign = "center"; pctx.fillText("Detune is off, so the notes keep their starting pitch.", (x0 + x1) / 2, m.t - 14); }
+  pctx.strokeStyle = css("--accent"); pctx.globalAlpha = 0.35; pctx.beginPath(); pctx.moveTo(X(frac), m.t - 6); pctx.lineTo(X(frac), h - m.b + 4); pctx.stroke(); pctx.globalAlpha = 1;
+}
+
 function frame(now) {
   requestAnimationFrame(frame);
   if (audio) {
@@ -1063,6 +1129,7 @@ function frame(now) {
     if (playing) drawChart();
     if (!scrubbing) scrub.value = String(Math.round(position() / audio.dur * 1000));
   }
+  if (viewMode === "pitch") { drawPitch(); return; }
   if (!renderer) return;
   if (camAnim) {
     const k = Math.min(1, (now - camAnim.t0) / 700), e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
