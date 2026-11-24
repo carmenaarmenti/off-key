@@ -6,7 +6,7 @@ A sonification of submissions to ICSE, FSE and ASE from 2006 to 2025. Each confe
 
 | File | Contents |
 |---|---|
-| `tutorial.html` | "Anatomy of Strangeness": a slide tutorial, one effect per slide, with audio experiments on a single note and a recognition quiz |
+| `tutorial.html` | "Anatomy of Strangeness": a slide tutorial, one effect per slide, with audio experiments on a single note and a recognition quiz. Its first step accepts your own three series as CSV (`year,<name>,<name>,<name>`, one row per consecutive year) |
 | `lab.html` | The full tool: every parameter, a 3D spectrogram, a time bar and settings export |
 | `sonify.py` | Renders WAV files with the same model, reading settings exported from the tool |
 | `build.sh` | Packages the tutorial and the tool for publishing as one page with two views |
