@@ -33,7 +33,7 @@ A welcome page plays the piece and offers two ways in: **Anatomy of Strangeness*
 
 ## Tutorial
 
-The tutorial opens one step at a time: each step unlocks the next when you press "Got it", and the steps not reached yet stay hidden. A **Glossary** link in the header opens the glossary page. Every step lists its own concepts as links; each link opens the page of that concept only, with its explanation, an example and its narrower ideas as sections (for instance *Strangeness* holds baseline, threshold, saturation, exponent γ and smoothing). A link to one of those narrower ideas opens the concept it belongs to, at that section. **Back to the tutorial** returns to the step you came from. The tool has the same link back to the tutorial. The title in the header of every page leads back to the welcome page.
+The tutorial opens one step at a time: each step unlocks the next when you press "Got it", and the steps not reached yet stay hidden. A **Glossary** link in the header opens the glossary page. Every step lists its own concepts as links; each link opens the page of that concept only, with its explanation, an example and its narrower ideas as sections (for instance *Strangeness* holds baseline, threshold, saturation, exponent γ and smoothing). A link to one of those narrower ideas opens the concept it belongs to, at that section. **Back to the tutorial** returns to the step you came from. The tool has the same link back to the tutorial, and the tutorial's header has a **Tool** link for readers who want to skip straight to it. **Off Key** in the header of every page leads back to the welcome page.
 
 ### Quiz
 
