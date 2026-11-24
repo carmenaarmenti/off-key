@@ -1,6 +1,10 @@
-# Submissions in Sound
+# Off Key
 
-A sonification of submissions to ICSE, FSE and ASE from 2006 to 2025. Each conference is a note. The further a year's submissions drift from the historical baseline (their median over a baseline period, 2006–2015 by default), the more the note warps.
+*An anatomy of strangeness in conference submissions.*
+
+Off Key is a sonification of submissions to ICSE, FSE and ASE from 2006 to 2025. Each conference is a note. The further a year's submissions drift from the historical baseline (their median over a baseline period, 2006–2015 by default), the more the note warps out of tune, until the chord no longer sounds right.
+
+It has two pages: **Anatomy of Strangeness**, a step-by-step tutorial on how the sound is built, and **Submissions in Sound**, the full tool.
 
 ## Files
 
