@@ -9,7 +9,7 @@ Usage:
 
 Idea: the sound does not say "how many", it says "something is wrong".
 For each conference we measure how far a year's submissions drift from the
-historical baseline (the 2006-2015 median). This "strangeness" (0..1) does not
+historical baseline (the median over the baseline period, 2006-2015 by default). This "strangeness" (0..1) does not
 raise loudness or pitch: it warps the note.
   detune          the note slides out of tune (cents)
   jitter          the pitch wobbles at random
@@ -29,7 +29,7 @@ from scipy.io import wavfile
 from scipy.ndimage import uniform_filter1d
 
 YEARS = np.arange(2006, 2026)
-BASE_END = 2015
+BASE_END = 2015   # default end of the baseline period
 # Sources: emeryberger/csconferences (CSV) and taoxie.cs.illinois.edu/seconferences.htm (FSE 2006-2010)
 DATA = {
     "ICSE": [395, 334, 371, 405, 380, 441, 408, 461, 496, 452,
@@ -47,6 +47,7 @@ DEFAULTS = {
     "beat": 0.5, "beatAccent": True,
     "threshold": 1.25, "saturate": 1.4, "gamma": 1.3,
     "ghost": 0.35, "baseFreq": 220, "partials": 28,
+    "baseEnd": BASE_END,   # last year of the baseline period (from 2006)
     "satMode": "own",   # "own": for single conferences, strangeness reaches 1 in the peak year
     "breath": False,    # slow volume swell, not tied to the data
     "fx": {
@@ -72,7 +73,7 @@ def smooth(a, sigma):
 
 def anomaly(values, p):
     v = np.asarray(values, float)
-    norm = np.median(v[YEARS <= BASE_END])
+    norm = np.median(v[YEARS <= p.get("baseEnd", BASE_END)])
     sat = p["saturate"]
     if p.get("satMode") == "own" and p["mode"] != "chord":
         sat = max(0.05, v.max() / norm - p["threshold"])

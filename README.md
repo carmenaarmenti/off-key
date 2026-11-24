@@ -1,6 +1,6 @@
 # Submissions in Sound
 
-A sonification of submissions to ICSE, FSE and ASE from 2006 to 2025. Each conference is a note. The further a year's submissions drift from the historical baseline (the 2006–2015 median), the more the note warps.
+A sonification of submissions to ICSE, FSE and ASE from 2006 to 2025. Each conference is a note. The further a year's submissions drift from the historical baseline (their median over a baseline period, 2006–2015 by default), the more the note warps.
 
 ## Files
 
@@ -13,7 +13,7 @@ A sonification of submissions to ICSE, FSE and ASE from 2006 to 2025. Each confe
 
 ## Model
 
-1. **Strangeness s(t)** between 0 and 1: `r = submissions / baseline`, `s = clip((r − threshold) / saturation)^γ`, interpolated between years and smoothed (¼ year).
+1. **Strangeness s(t)** between 0 and 1: `baseline = median over the baseline period` (its last year is adjustable), `r = submissions / baseline`, `s = clip((r − threshold) / saturation)^γ`, interpolated between years and smoothed (¼ year).
 2. **Note**: a sum of N harmonic partials with amplitudes `k^−2.2`.
 3. **Effects**, each with amount `depth × s(t)`, in the order they are computed:
    detune → jitter → inharmonicity → spectral tilt → wavefolding.
