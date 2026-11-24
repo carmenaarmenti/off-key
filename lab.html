@@ -54,6 +54,8 @@ body {
 }
 .wrap { max-width: 1400px; margin: 0 auto; display: grid; gap: 24px; }
 header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px 24px; }
+.back-link { display: inline-block; margin-bottom: 10px; font-size: 0.85rem; font-weight: 500; color: var(--accent); text-decoration: none; }
+.back-link:hover { text-decoration: underline; text-underline-offset: 3px; }
 header h1 { font: 600 1.7rem/1.1 var(--font-display); letter-spacing: -0.025em; margin: 0; }
 header p { margin: 6px 0 0; color: var(--muted); max-width: 62ch; }
 .layout { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 24px; align-items: start; }
@@ -178,6 +180,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-v
 <div class="wrap">
   <header>
     <div>
+      <a class="back-link" id="toTutorial" href="./" hidden>← Back to the tutorial</a>
       <h1>Submissions in Sound</h1>
       <p>ICSE, FSE and ASE, 2006–2025. Each conference is a note that warps as its submissions drift away from their historical baseline.</p>
     </div>
@@ -1207,6 +1210,19 @@ loadFile.addEventListener("change", () => {
   rd.onerror = () => say("The file could not be read.");
   rd.readAsText(f); loadFile.value = "";
 });
+
+// ---------- back to the tutorial ----------
+// Shown only where the tool is published next to the tutorial (build.sh sets OFFKEY_BUNDLED).
+// It returns to the step the reader came from when possible, otherwise to the start.
+const toTutorial = document.getElementById("toTutorial");
+if (window.OFFKEY_BUNDLED) {
+  toTutorial.hidden = false;
+  toTutorial.addEventListener("click", e => {
+    let fromTutorial = false;
+    try { const r = new URL(document.referrer); fromTutorial = r.origin === location.origin && !/(glossary|lab)\.html$/.test(r.pathname); } catch (err) {}
+    if (fromTutorial && history.length > 1) { e.preventDefault(); history.back(); }
+  });
+}
 
 // ---------- startup ----------
 const mq = window.matchMedia("(prefers-color-scheme: dark)");
