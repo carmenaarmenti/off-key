@@ -51,7 +51,11 @@ body {
 /* top bar */
 .top { display: grid; gap: 12px; padding-block: 20px 8px; }
 .top-row { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
-.mark { font: 600 0.95rem var(--font-display); letter-spacing: -0.01em; color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
+/* same links as at the top of the tool: home, and straight to the tool for readers who want to skip the tutorial */
+.crumbs { display: flex; align-items: baseline; gap: 18px; font-size: 0.85rem; font-weight: 500; }
+.crumbs a { color: var(--accent); text-decoration: none; }
+.crumbs a.home { color: var(--ink); font: 600 0.95rem var(--font-display); letter-spacing: -0.01em; }
+.crumbs a:hover { text-decoration: underline; text-underline-offset: 3px; }
 .step-name { font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .progress { display: flex; gap: 4px; }
 .progress button { flex: 1; height: 18px; border: 0; padding: 7px 0; background: none; cursor: pointer; }
@@ -196,7 +200,7 @@ button:focus-visible, input:focus-visible, a:focus-visible, summary:focus-visibl
 <div class="app">
   <header class="top">
     <div class="top-row">
-      <a class="mark" href="./" title="Off Key home">Anatomy of Strangeness</a>
+      <nav class="crumbs" aria-label="Off Key"><a class="home" href="./">Off Key</a><a href="lab.html">Tool</a></nav>
       <span class="top-right"><span class="step-name" id="stepName"></span><a class="gloss-open" href="glossary.html">Glossary</a></span>
     </div>
     <nav class="progress" id="progress" aria-label="Tutorial steps"></nav>
